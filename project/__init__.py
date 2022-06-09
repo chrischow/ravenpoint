@@ -36,5 +36,5 @@ api_extension = Api(
 api_extension.add_namespace(api_namespace)
 
 # Register blueprints
-app.register_blueprint(api)
+app.register_blueprint(api, url_prefix='/ravenpoint')
 # app.register_blueprint(admin)

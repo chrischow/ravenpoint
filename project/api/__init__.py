@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 
+from collections import defaultdict
 from project import db
 from flask import Blueprint, request
 from flask_restplus import Namespace, Resource, fields
@@ -54,49 +55,48 @@ class XRequestDigestValue(Resource):
     '''X-Request Digest Value endpoint'''
     return {'response': '1111-2222-3333-4444'}
 
-# Endpoint for list item entity type full name
-list_item_entity_fields = api_namespace.model(
-  'ListItemEntityFullName', {
-    'ListItemEntityTypeFullName': fields.String(
-      readonly=True,
-      description="Returns the supplied list's (fake) ListItemEntityTypeFullName."
-    )
-  }
-)
-
-list_item_entity_type_full_name_model = api_namespace.model(
-  'ListItemEntityType', {
-    'd': fields.Nested(list_item_entity_fields)
-  }
-)
-
-@api_namespace.route("/web/Lists(guid'<string:list_id>')$select=ListItemEntityTypeFullName")
-@api_namespace.doc(params={'list_id': 'Simulated SP List ID'})
-class ListItemEntityTypeFullName(Resource):
-  @api_namespace.marshal_list_with(
-    list_item_entity_type_full_name_model,
-    description="Success: Returns the supplied list's (fake) ListItemEntityTypeFullName."
-  )
-  @api_namespace.response(500, 'Internal Server Error')
-  def get(self, list_id):
-    '''ListItemEntityTypeFullName endpoint'''
-    return {'d': {'ListItemEntityTypeFullName': 'FakeDatasetListItem'}}
-
 # Endpoint for getting list items
-list_item_fields = api_namespace.model(
-  'ListItemFields', {
-    'data': fields.List(fields.String)
-  }
-)
 @api_namespace.route(
   "/web/Lists(guid'<string:list_id>')/items",
-  doc={'description': 'Endpoint for interacting with simulated List (SQLite database). \
-    Currently implemented URL params: `filter` and `select`.'})
+  doc={'description': '''Endpoint for interacting with simulated List (SQLite database). \
+Currently implemented URL params: `filter`, `select`, and `expand`.
+
+- Use `$select=ListItemEntityTypeFullName` to get the List item entity type.
+  '''})
 @api_namespace.doc(params={'list_id': 'Simulated SP List ID'})
 class ListItems(Resource):
-  @api_namespace.response(200, 'Success: Returns data.')
+  @api_namespace.response(200, 'Success: Returns requested list items or properties.')
   @api_namespace.response(500, 'Internal Server Error')
   def get(self, list_id):
-    '''RavenPoint list items endpoint'''
-    print(request.args)
-    return {'data': list_id }
+    '''RavenPoint list properties endpoint'''
+    # Extract URL params
+    params = {'listId': list_id}
+    for k, v in request.args.items():
+      assert k in ['$select', '$filter', '$expand'], 'Use only keywords $select, $filter, $expand.'
+      params[k] = v
+    expand_tables = []
+    if '$expand' in params.keys():
+      expand_tables = params['$expand'].split(',')
+    if '$select' in params.keys():
+      # Check for ListItemEntityTypeFullName
+      if params['$select'] == 'ListItemEntityTypeFullName':
+        return {'d': 'SP.Data.FakeDataListItem'}
+      
+      # Extract columns, processing expanded tables (if any)
+      select_params = params['$select'].split(',')
+      return_cols = []
+      joined_fields = defaultdict(list)
+      for col in select_params:
+        if '/' in col:
+          join_table, join_col = col.split('/')
+          if '/' in join_table:
+            join_table = join_table.split('/')[0]
+          # Only add tableName.colName if that table is specified in the expand keyword
+          joined_fields[join_table].append(join_col)
+        else:
+          return_cols.append(col)
+
+      params['columns'] = return_cols
+      params['expand_tables'] = expand_tables
+      params['joined_fields'] = joined_fields
+    return params
