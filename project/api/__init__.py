@@ -62,6 +62,9 @@ class XRequestDigestValue(Resource):
 Currently implemented URL params: `filter`, `select`, and `expand`.
 
 - Use `$select=ListItemEntityTypeFullName` to get the List item entity type.
+- Use `$select=<columns>` to select columns.
+- Use `$filter=<criteria>` to filter items.
+- Use `$expand=<lookup_table>` to join tables.
   '''})
 @api_namespace.doc(params={'list_id': 'Simulated SP List ID'})
 class ListItems(Resource):
