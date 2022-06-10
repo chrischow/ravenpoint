@@ -2,7 +2,7 @@
 A SharePoint REST API clone based in Python (Flask) for testing apps that use SharePoint Lists as a backend for storing data.
 
 ## Motivation
-It's difficult getting access to a S
+There is a huge disparity between the development and production environments for Team Raven's React.js apps. This creates a challenge in developing the frontend and the backend for the apps at the same time - something that ought to be done when using React.js. Specifically, the development of the frontend and some of the backend features happens in the development environment, and all interaction with databases happens in sandboxes in the production environment. of code to query SharePoint (SP) List data via the SP OData REST API.
 
 ## Features
 
@@ -21,10 +21,11 @@ It's difficult getting access to a S
 - Delete datasets
 
 ## Installation
-Use the `requirements.txt` to create a Conda environment.
+First, clone this repository to a local directory.
 
-## Usage
-Navigate to the `ravenpoint` folder, then set up the DB:
+Second, use the `requirements.txt` file to install the dependencies in a virtual environment.
+
+Third, navigate to the `ravenpoint` folder and set up the DB:
 
 ```bash
 cd ravenpoint
@@ -34,9 +35,11 @@ flask db migrate -m "Initial migration"
 flask db upgrade
 ```
 
-Start the Flask development server:
+## Usage
+In the `ravenpoint` folder, start the Flask development server:
 
 ```bash
+cd ravenpoint
 python app.py
 ```
 
