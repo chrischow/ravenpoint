@@ -49,7 +49,7 @@ def index():
             os.remove(filepath)
 
             # Check that data includes `id` column
-            if 'id' not in df.columns:
+            if 'Id' not in df.columns:
                 flash("<code>id</code> column not found.", 'danger')
                 return redirect(url_for('admin.index'))
             
@@ -61,7 +61,7 @@ def index():
                 # Add table to database
                 with sqlite3.connect(conn_string) as conn:
                     df.to_sql(table_db_name, con=conn, if_exists='replace', index=False,
-                            dtype={'id': 'INTEGER PRIMARY KEY'})
+                            dtype={f'{df.columns[0]}': 'INTEGER PRIMARY KEY'})
 
                 # Add table to register
                 new_table = Table(table_name, table_db_name)
@@ -153,3 +153,7 @@ def relationships():
 
     return render_template('relationships.html', form=form,
                            relationships=all_relationships.to_dict('records'))
+
+@admin.route('/guide', methods=['GET'])
+def guide():
+    return render_template('guide.html')

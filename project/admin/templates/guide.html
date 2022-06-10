@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+  <h1>RavenPoint API Guide</h1>
+  <h3 style="color: #7b73f0;">Welcome to RavenPoint!</h3>
+  <p>
+    This guide aims to help you get up and running with RavenPoint ASAFP.
+  </p>
+</div>
+
+<div class="container mt-5">
+  <h2>Main Features</h2>
+  <p>RavenPoint has two main features:</p>
+  <ol>
+    <li>RavenPoint Admin Panel</li>
+    <li>RavenPoint API</li>
+  </ol>
+  <h4 class="mt-4">RavenPoint API</h4>
+  <p>
+    The API emulates the SharePoint's REST API, specifically the endpoints that enable interaction with Lists. The (1) syntax for URL parameters (Open Data Protocol a.k.a OData), (2) required headers, and (3) responses are designed to mimic those used on the SharePoint REST API as closely as possible. This provides Team Raven Stack developers with a seamless experience in developing React apps in a production environment.
+  </p>
+  <h4 class="mt-4">RavenPoint Admin Panel</h4>
+  <p>
+    The Admin Panel is what you're looking at. It allows you to add and delete (1) tables and (2) relationships between the tables.
+  </p>
+  
+</div>
+
+<div class="container mt-5 mb-5">
+  <hr>
+</div>
+
+<div class="container mt-5">
+  <h2>Loading Data</h2>
+  <p>
+    First, it's important to note that RavenPoint only accepts data in the form of CSV files. We don't expect any non-tabular data since this is meant to emulate SharePoint's REST API for access to Lists.
+  </p>
+  <p>
+    Second, ensure the <strong>first column</strong> in your dataset is a column named <code>Id</code> containing unique integers. This is because (1) it is required to accurately emulate SharePoint, which has a default column of the same name, and (2) RavenPoint automatically processes the leftmost column as the primary key.
+  </p>
+  <p>
+    Third, load your data on the <strong>Tables</strong> page:
+  </p>
+  <ol>
+    <li>Hit the <code>Add Table</code> button to launch a pop-up window with a form.</li>
+    <li>Input a table name. Think carefully! This name will be used to generate a database table name. Characters other than alphanumerics and spaces are strongly not encouraged. Please also follow typical naming conventions (e.g. don't put a number in front). As an example of how the name will be transformed, <em>DC Datasets</em> will be stored in the backend database as <code>dc_datasets</code>.</li>
+    <li>Hit Submit and <strong>wait</strong>. Do not click the Submit button in quick succession. Doing so may result in an error writing to the database.</li>
+    <li>If the data is loaded successfully, you will be re-directed back to the Admin Panel home page (Tables view) and a success message will appear. If that does not happen, check your data and try again.</li>
+  </ol>
+</div>
+
+<div class="container mt-5 mb-5">
+  <hr>
+</div>
+
+<div class="container mt-5">
+  <h2>Sending Queries</h2>
+  <p>
+
+  </p>
+</div>
+
+{% endblock %}
