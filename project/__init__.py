@@ -16,6 +16,7 @@ app.config['SECRET_KEY'] = 'ravenpoint'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data', 'data.sqlite')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['RESTPLUS_MASK_SWAGGER'] = False
+app.config['SWAGGER_UI_DOC_EXPANSION'] = 'list'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'files')
 
 db = SQLAlchemy(app)
