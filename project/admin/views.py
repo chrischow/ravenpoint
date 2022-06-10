@@ -17,9 +17,9 @@ admin = Blueprint(
 @admin.route('/', methods=['GET', 'POST'])
 def index():
     # Test
-    # qry = translate_odata(app.config['SQLALCHEMY_DATABASE_URI'], 'mock_data',
-    #                       "(first_name eq 'John') and (score le 0)")
-    # print(qry)
+    qry = translate_odata(app.config['SQLALCHEMY_DATABASE_URI'], 'mock_data',
+                          "(first_name eq 'John') and (score le 0)")
+    print(qry)
 
     # Handle password changes
     form = UploadData()
