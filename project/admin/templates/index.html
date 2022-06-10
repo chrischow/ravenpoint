@@ -65,7 +65,7 @@
       {% for table in tables %}
       <tr>
         <td>
-          <a href="{{ url_for('admin.table_view', table_name=table.table_db_name) }}">
+          <a href="{{ url_for('admin.table_view', table_db_name=table.table_db_name) }}">
             {{ table.table_name }}
           </a>
         </td>

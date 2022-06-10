@@ -97,26 +97,26 @@ def index():
             print(form.errors)
             for field, error_msg in form.errors.items():
                 flash(f'Form submission failed: {" ".join(error_msg)}', 'danger')
-
+    
     return render_template('index.html', form=form, tables=all_tables.to_dict('records'))
 
 
-@admin.route('/table/<string:table_name>', methods=['GET'])
-def table_view(table_name):
+@admin.route('/table/<string:table_db_name>', methods=['GET'])
+def table_view(table_db_name):
     # Connect to database
     conn = sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', ''))
 
     # Check if table is valid - redirect back to admin panel if not
     all_tables = get_all_table_names(conn)
-    if table_name not in all_tables.name.tolist():
+    if table_db_name not in all_tables.table_db_name.tolist():
         flash('Invalid table.')
         return redirect(url_for('admin.index'))
     
     # Get data
-    df = pd.read_sql(f'SELECT * FROM {table_name}', conn)
+    df = pd.read_sql(f'SELECT * FROM {table_db_name}', conn)
     conn.close()
     
     return render_template('table.html', table=df.to_dict('records'),
-                            columns=df.columns.tolist(), table_name=table_name)
+                            columns=df.columns.tolist(), table_db_name=table_db_name)
     
 
