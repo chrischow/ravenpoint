@@ -9,7 +9,7 @@ class UploadData(FlaskForm):
     csv_file = FileField('Data (CSV file)', [FileAllowed(['csv'], 'CSV files only.')])
     table_name = StringField('Table Name', [DataRequired()])
     
-    submit = SubmitField('Upload Data')
+    submit = SubmitField('Submit')
 
 class EditRelationship(FlaskForm):
     table_left = StringField('Table 1 Name', [DataRequired()])
@@ -17,3 +17,5 @@ class EditRelationship(FlaskForm):
     table_right = StringField('Table 2 Name', [DataRequired()])
     table_right_on = StringField('Table 2 Column', [DataRequired()])
     description = StringField('Description')
+
+    submit = SubmitField('Submit')

@@ -1,12 +1,14 @@
 import os
+from traceback import format_exception_only
 import pandas as pd
 import sqlite3
 
 from flask import render_template, Blueprint, url_for, redirect, request, flash, send_from_directory
 from project import db, app
-from project.admin.forms import UploadData
-from project.models import Table
-from project.utils import get_all_table_names, translate_odata
+from project.admin.forms import UploadData, EditRelationship
+from project.models import Table, Relationship
+from project.utils import get_all_table_names, get_all_table_metadata, translate_odata, \
+    get_all_relationships
 from werkzeug.utils import secure_filename
 
 admin = Blueprint(
@@ -14,39 +16,27 @@ admin = Blueprint(
     template_folder='templates'
 )
 
+# Configure connection string
+conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+
 @admin.route('/', methods=['GET', 'POST'])
 def index():
     # Test
-    qry = translate_odata(app.config['SQLALCHEMY_DATABASE_URI'], 'mock_data',
-                          "(first_name eq 'John') and (score le 0)")
-    print(qry)
+    # qry = translate_odata(app.config['SQLALCHEMY_DATABASE_URI'], 'mock_data',
+    #                       "(first_name eq 'John') and (score le 0)")
+    # print(qry)
 
-    # Handle password changes
+    # Initialise form
     form = UploadData()
 
-    # Connect to database
-    conn = sqlite3.connect(
-        app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
-    )
+    # Get tables metadata
+    conn = sqlite3.connect(conn_string)
 
     all_tables = get_all_table_names(conn)
-    nrows = []
-    all_columns = []
-    for table_name in all_tables.table_db_name:
-        # Get columns
-        cursor = conn.execute(f"SELECT * FROM {table_name}")
-        columns = ', '.join(list(map(lambda x: x[0], cursor.description)))
-        all_columns.append(columns)
-
-        # Get no. of rows
-        cursor = conn.execute(f"SELECT COUNT(*) FROM {table_name}")
-        table_nrows = cursor.fetchone()[0]
-        nrows.append(table_nrows)
-
-    all_tables['nrows'] = nrows
-    all_tables['columns'] = all_columns
+    table_metadata = get_all_table_metadata(conn, all_tables)
 
     conn.close()
+
     if request.method == 'POST':
         if form.validate_on_submit():
             
@@ -72,10 +62,9 @@ def index():
             # Load into sqlite
             try:
                 # Add table to database
-                conn = sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', ''))
-                df.to_sql(table_db_name, con=conn, if_exists='replace', index=False,
-                          dtype={'id': 'INTEGER PRIMARY KEY'})
-                conn.close()
+                with sqlite3.connect(conn_string) as conn:
+                    df.to_sql(table_db_name, con=conn, if_exists='replace', index=False,
+                            dtype={'id': 'INTEGER PRIMARY KEY'})
 
                 # Add table to register
                 new_table = Table(table_name, table_db_name)
@@ -85,7 +74,7 @@ def index():
             except Exception as e:
                 print('Error loading data into database:')
                 print(e)
-
+                db.session.rollback()
                 flash(f"Failed to load data into database:\n{e}", 'danger')
                 return redirect(url_for('admin.index'))
 
@@ -98,25 +87,71 @@ def index():
             for field, error_msg in form.errors.items():
                 flash(f'Form submission failed: {" ".join(error_msg)}', 'danger')
     
-    return render_template('index.html', form=form, tables=all_tables.to_dict('records'))
+    return render_template('index.html', form=form, tables=table_metadata.to_dict('records'))
 
-
-@admin.route('/table/<string:table_db_name>', methods=['GET'])
-def table_view(table_db_name):
+# Table view
+@admin.route('/table/<string:id>', methods=['GET'])
+def table_view(id):
     # Connect to database
-    conn = sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', ''))
+    with sqlite3.connect(conn_string) as conn:
+        # Get table
+        table = Table.query.filter_by(id=id).first_or_404()
 
-    # Check if table is valid - redirect back to admin panel if not
-    all_tables = get_all_table_names(conn)
-    if table_db_name not in all_tables.table_db_name.tolist():
-        flash('Invalid table.')
-        return redirect(url_for('admin.index'))
+        # Get data
+        df = pd.read_sql(f'SELECT * FROM {table.table_db_name}', conn)
     
-    # Get data
-    df = pd.read_sql(f'SELECT * FROM {table_db_name}', conn)
-    conn.close()
-    
-    return render_template('table.html', table=df.to_dict('records'),
-                            columns=df.columns.tolist(), table_db_name=table_db_name)
-    
+    return render_template('table.html', table=df.to_dict('records'), id=id,
+                            columns=df.columns.tolist(), table_db_name=table.table_db_name)
 
+# Delete table endpoint
+@admin.route('/table/<string:id>/delete', methods=['POST'])
+def table_delete(id):
+    # Delete id
+    table = Table.query.filter_by(id=id).first_or_404()
+    # print(table)
+    # Run delete query
+    with db.engine.connect() as conn:
+        transaction = conn.begin()
+        try:
+            conn.execute(f'DROP TABLE {table.table_db_name}')
+            conn.execute(f"DELETE FROM tables WHERE id='{id}'")
+            transaction.commit()
+        except Exception as e:
+            transaction.rollback()
+            flash(f'Error: Could not delete {table.table_db_name}. \n{e}', 'danger')
+            return redirect(url_for('admin.table_view', id=id))
+    return redirect(url_for('admin.index'))
+        
+
+@admin.route('/relationships', methods=['GET'])
+def relationships():
+
+    # Initialise form
+    form = EditRelationship()
+    
+    # Get all relationships
+    with sqlite3.connect(conn_string) as conn:
+        all_relationships = get_all_relationships(conn)
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            # Extract form data
+            table_left = form.table_left.data
+            table_left_on = form.table_left_on.data
+            table_right = form.table_right.data
+            table_right_on = form.table_right_on.data
+            description = form.description.data
+
+            # Create new relationship
+            new_rship = Relationship(table_left, table_left_on, table_right, 
+                                     table_right_on, description)
+            
+            # Commit changes
+            try:
+                db.session.add(new_rship)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Failed to load data into database:\n{e}", 'danger')
+                return redirect(url_for('admin.relationships'))
+
+    return render_template('relationships.html', form=form)

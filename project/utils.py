@@ -10,7 +10,34 @@ def get_all_table_names(conn):
     'SELECT * from tables',
     conn
   )
-  return pd.DataFrame(df)
+  return df
+
+# Get all table metadata
+def get_all_table_metadata(conn, tables):
+  nrows = []
+  all_columns = []
+  for table_name in tables.table_db_name:
+      # Get columns
+      cursor = conn.execute(f"SELECT * FROM {table_name}")
+      columns = ', '.join(list(map(lambda x: x[0], cursor.description)))
+      all_columns.append(columns)
+
+      # Get no. of rows
+      cursor = conn.execute(f"SELECT COUNT(*) FROM {table_name}")
+      table_nrows = cursor.fetchone()[0]
+      nrows.append(table_nrows)
+  output = tables.copy()
+  output['nrows'] = nrows
+  output['columns'] = all_columns
+  return output
+
+# Get all relationships in database
+def get_all_relationships(conn):
+  df = pd.read_sql(
+    'SELECT * FROM relationships',
+    conn
+  )
+  return df
 
 def translate_odata(database_uri, table_name, odata_query):
   from odata_query.sqlalchemy import apply_odata_query

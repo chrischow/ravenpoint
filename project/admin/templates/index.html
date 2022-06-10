@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="container mt-4">
-  <h1>RavenPoint API - Admin Panel</h1>
+  <h1>RavenPoint Admin</h1>
   <p>
     For managing mock data uploaded to the app.
     Access the RavenPoint API Swagger UI
@@ -11,46 +11,59 @@
   </p>
 </div>
 
-<div class="container main mt-5">
-  <h3>Upload File</h3>
-  <p>
-    Upload your data in CSV format (only). The data will be loaded into the app's 
-    SQLite database. Note the following:
-  </p>
-  <ul>
-    <li>Table names are compulsory.</li>
-    <li>Inserting a table with a name that is already used will <strong>replace</strong> the old table.</li>
-  </ul>
-  <form class="mt-3" method="POST" enctype="multipart/form-data">
-    <div class="form-group">
-      <!-- For CSRF security -->
-      {{ form.hidden_tag() }}
-      <div class="container">
-        <div class="row justify-content-center">
-          <div class="col-11 col-lg-7 col-md-8 mt-3">
-            {{ form.csv_file.label }} {{ form.csv_file(class='form-control') }}
-          </div>
-          <div class="col-11 col-lg-7 col-md-8 mt-3">
-            {{ form.table_name.label }}
-            <small class="ml-3"><code>Display name. Used to generate database table ID and name.</code></small>
-            {{ form.table_name(class='form-control') }}
-          </div>
-          <div class="col-11 col-lg-7 col-md-8 mt-3 text-right">
-            {{ form.submit(class='btn btn-primary') }}
-          </div>
+<div class="container mt-4">
+  <h2>Tables</h2>
+  <button type="button" class="btn btn-primary mt-3" data-toggle="modal" data-target="#addTableModal">
+    Add Table
+  </button>
+  <div class="modal fade" id="addTableModal" tabindex="-1" role="dialog" aria-labelledby="addTableModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addTableModalLabel">Upload Data</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
         </div>
+        <div class="modal-body">
+          <p>
+            Upload your data in CSV format (only). The data will be loaded into the app's 
+            SQLite database. Note the following:
+          </p>
+          <ul>
+            <li>Table names are compulsory.</li>
+            <li>Inserting a table with a name that is already used will <strong>replace</strong> the old table.</li>
+          </ul>
+          <form class="mt-3" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+              <!-- For CSRF security -->
+              {{ form.hidden_tag() }}
+              <div class="container">
+                <div class="row justify-content-center">
+                  <div class="col-12 mt-3">
+                    {{ form.csv_file.label }} {{ form.csv_file(class='form-control') }}
+                  </div>
+                  <div class="col-12 mt-3">
+                    {{ form.table_name.label }}
+                    <small class="ml-3"><code>Display name. Used to generate database table ID and name.</code></small>
+                    {{ form.table_name(class='form-control') }}
+                  </div>
+                  <div class="col-12 mt-3 text-right">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    {{ form.submit(class='btn btn-primary') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        
       </div>
     </div>
-  </form>
+  </div>
 </div>
 
-<div class="container main mt-5">
-  <hr>
-</div>
-
-<div class="container main mt-5">
-  <h3>Tables</h3>
-  <br>
+<div class="container mt-5">
   <table class="table table-striped" id="all-tables">
     <thead class="thead-dark">
       <tr>
@@ -65,7 +78,7 @@
       {% for table in tables %}
       <tr>
         <td>
-          <a href="{{ url_for('admin.table_view', table_db_name=table.table_db_name) }}">
+          <a href="{{ url_for('admin.table_view', id=table.id) }}">
             {{ table.table_name }}
           </a>
         </td>
@@ -84,18 +97,7 @@
 </div>
 
 <div class="container main mt-5">
-  <h3>Manage Relationships</h3>
-  <div class="text-center mt-4">
-    Form to add relationships between tables. Maybe put it in another page?
-  </div>
-</div>
-
-<div class="container main mt-5">
-  <hr>
-</div>
-
-<div class="container main mt-5">
-  <h3>Delete Tables</h3>
+  <h2>Delete Tables</h2>
   <div class="text-center mt-4">
     Form with dropdown menu to delete tables. Maybe put it in another page?
   </div>
@@ -104,8 +106,7 @@
 <script>
   $(document).ready(function () {
     // Convert to data table
-    $("#all-tables").DataTable({
-    });
+    $("#all-tables").DataTable();
   });
 </script>
 

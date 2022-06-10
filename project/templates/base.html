@@ -6,7 +6,7 @@
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>RavenPoint REST API</title>
+        <title>RavenPoint API</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         
@@ -51,7 +51,10 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav ml-auto">
                       <li class="nav-item">
-                          <a class="nav-link" href="{{ url_for('admin.index') }}">Home</a>
+                          <a class="nav-link" href="{{ url_for('admin.index') }}">Tables</a>
+                      </li>
+                      <li class="nav-item">
+                          <a class="nav-link" href="{{ url_for('admin.relationships') }}">Relationships</a>
                       </li>
                     </ul>
                 </div>
