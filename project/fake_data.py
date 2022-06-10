@@ -111,17 +111,17 @@ with sqlite3.connect(conn_string) as conn:
       table_db_name = secure_filename(tablename).lower()
       temp_df = pd.DataFrame(table)
       if entity != 'term':
-        temp_df = temp_df.reset_index().rename(columns={'index': f'{entity}Id'})
+        temp_df = temp_df.reset_index().rename(columns={'index': 'Id'})
       temp_df.to_sql(
         table_db_name, con=conn, if_exists='replace', index=False,
         dtype={f'{entity}Id': 'INTEGER PRIMARY KEY'}
       )
 
       # Add to register
-      # cursor = conn.cursor()
-      # table_hash_id = md5(tablename.encode()).hexdigest()
-      # cursor.execute(f"INSERT INTO tables (id, table_name, table_db_name) \
-      #   VALUES ('{table_hash_id}', '{tablename}', '{table_db_name}')")
+      cursor = conn.cursor()
+      table_hash_id = md5(tablename.encode()).hexdigest()
+      cursor.execute(f"INSERT OR REPLACE INTO tables (id, table_name, table_db_name) \
+        VALUES ('{table_hash_id}', '{tablename}', '{table_db_name}')")
   except Exception as e:
     print(e)
     conn.rollback()
