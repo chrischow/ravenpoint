@@ -67,6 +67,7 @@
   <table class="table table-striped" id="all-relationships">
     <thead class="thead-dark">
       <tr>
+        <th scope="col">ID</th>
         <th scope="col">Table 1</th>
         <th scope="col">Table 1 Column</th>
         <th scope="col">Table 2 Column</th>
@@ -75,6 +76,16 @@
       </tr>
     </thead>
     <tbody>
+      {% for rship in relationships %}
+      <tr>
+        <td>{{ rship.rship_id }}</td>
+        <td>{{ rship.table_left }}</td>
+        <td>{{ rship.table_left_on }}</td>
+        <td>{{ rship.table_right_on }}</td>
+        <td>{{ rship.table_right }}</td>
+        <td>{{ rship.description }}</td>
+      </tr>
+      {% endfor %}
     </tbody>
   </table>
 </div>

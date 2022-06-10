@@ -30,12 +30,9 @@ def index():
     form = UploadData()
 
     # Get tables metadata
-    conn = sqlite3.connect(conn_string)
-
-    all_tables = get_all_table_names(conn)
-    table_metadata = get_all_table_metadata(conn, all_tables)
-
-    conn.close()
+    with sqlite3.connect(conn_string) as conn:
+        all_tables = get_all_table_names(conn)
+        table_metadata = get_all_table_metadata(conn, all_tables)
 
     if request.method == 'POST':
         if form.validate_on_submit():
@@ -92,11 +89,11 @@ def index():
 # Table view
 @admin.route('/table/<string:id>', methods=['GET'])
 def table_view(id):
+    # Get table
+    table = Table.query.filter_by(id=id).first_or_404()
+    
     # Connect to database
     with sqlite3.connect(conn_string) as conn:
-        # Get table
-        table = Table.query.filter_by(id=id).first_or_404()
-
         # Get data
         df = pd.read_sql(f'SELECT * FROM {table.table_db_name}', conn)
     
@@ -110,14 +107,14 @@ def table_delete(id):
     table = Table.query.filter_by(id=id).first_or_404()
     # print(table)
     # Run delete query
-    with db.engine.connect() as conn:
-        transaction = conn.begin()
+    with sqlite3.connect(conn_string) as conn:
+        cursor = conn.cursor()
         try:
-            conn.execute(f'DROP TABLE {table.table_db_name}')
-            conn.execute(f"DELETE FROM tables WHERE id='{id}'")
-            transaction.commit()
+            cursor.execute(f'DROP TABLE {table.table_db_name}')
+            cursor.execute(f"DELETE FROM tables WHERE id='{id}'")
+            conn.commit()
         except Exception as e:
-            transaction.rollback()
+            conn.rollback()
             flash(f'Error: Could not delete {table.table_db_name}. \n{e}', 'danger')
             return redirect(url_for('admin.table_view', id=id))
     return redirect(url_for('admin.index'))
@@ -154,4 +151,5 @@ def relationships():
                 flash(f"Failed to load data into database:\n{e}", 'danger')
                 return redirect(url_for('admin.relationships'))
 
-    return render_template('relationships.html', form=form)
+    return render_template('relationships.html', form=form,
+                           relationships=all_relationships.to_dict('records'))

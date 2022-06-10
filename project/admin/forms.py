@@ -2,6 +2,7 @@ import sqlite3
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileRequired, FileAllowed
 from project import app, db
+from project.utils import NotEqualTo
 from wtforms import StringField, SubmitField, FileField
 from wtforms.validators import DataRequired
 
@@ -12,7 +13,7 @@ class UploadData(FlaskForm):
     submit = SubmitField('Submit')
 
 class EditRelationship(FlaskForm):
-    table_left = StringField('Table 1 Name', [DataRequired()])
+    table_left = StringField('Table 1 Name', [DataRequired(), NotEqualTo('table_right')])
     table_left_on = StringField('Table 1 Column', [DataRequired()])
     table_right = StringField('Table 2 Name', [DataRequired()])
     table_right_on = StringField('Table 2 Column', [DataRequired()])

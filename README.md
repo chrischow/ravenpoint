@@ -55,4 +55,4 @@ python app.py
 
 ## Resources
 - Parser for OData filters: [odata-query](https://github.com/gorilla-co/odata-query)
-
+- NotEqualTo Validator: [wtforms-validators](https://github.com/akhilharihar/wtforms-validators)
