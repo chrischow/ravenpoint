@@ -4,11 +4,11 @@ import pandas as pd
 from collections import defaultdict
 from project import db
 from flask import Blueprint, request
-from flask_restplus import Namespace, Resource, fields
+from flask_restx import Namespace, Resource, fields
 
 # Create blueprint
 api = Blueprint(
-  'admin', __name__,
+  'api', __name__,
   template_folder='api_templates'
 )
 
@@ -86,7 +86,7 @@ class ListItems(Resource):
         return {'d': 'SP.Data.FakeDataListItem'}
       
       # Extract columns, processing expanded tables (if any)
-      select_params = params['$select'].split(',')
+      select_params = params['$select'].replace(' ', '').split(',')
       return_cols = []
       joined_fields = defaultdict(list)
       for col in select_params:
@@ -95,11 +95,14 @@ class ListItems(Resource):
           if '/' in join_table:
             join_table = join_table.split('/')[0]
           # Only add tableName.colName if that table is specified in the expand keyword
-          joined_fields[join_table].append(join_col)
+          if join_table in expand_tables:
+            joined_fields[join_table].append(join_col)
         else:
           return_cols.append(col)
 
       params['columns'] = return_cols
       params['expand_tables'] = expand_tables
       params['joined_fields'] = joined_fields
+      # print(request.headers)
+      print(dict(request.args.items()))
     return params

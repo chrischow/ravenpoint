@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+  <h1>RavenPoint REST API - Admin Panel</h1>
+  <p>
+    For managing mock data uploaded to the app.
+    Access the RavenPoint REST API documentation 
+    <a href="http://127.0.0.1:5000/ravenpoint/doc" target="_blank">here</a>.
+  </p>
+</div>
+
+<div class="container main mt-5">
+  <h3>Upload File</h3>
+  <p>
+    Upload your data in CSV format (only). The data will be loaded into the app's 
+    SQLite database. Note the following:
+  </p>
+  <ul>
+    <li>Table names are compulsory.</li>
+    <li>Inserting a table with a name that is already used will <strong>replace</strong> the old table.</li>
+  </ul>
+  <form class="mt-3" method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <!-- For CSRF security -->
+      {{ form.hidden_tag() }}
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-11 col-lg-7 col-md-8 mt-3">
+            {{ form.csv_file.label }} {{ form.csv_file(class='form-control') }}
+          </div>
+          <div class="col-11 col-lg-7 col-md-8 mt-3">
+            {{ form.table_name.label }}
+            <small class="ml-3"><code>Display name. Used to generate database table ID and name.</code></small>
+            {{ form.table_name(class='form-control') }}
+          </div>
+          <div class="col-11 col-lg-7 col-md-8 mt-3 text-right">
+            {{ form.submit(class='btn btn-primary') }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="container main mt-5">
+  <hr>
+</div>
+
+<div class="container main mt-5">
+  <h3>Existing Data</h3>
+  <br>
+  <table class="table table-striped" id="all-tables">
+    <thead class="thead-dark">
+      <tr>
+        <th scope="col">Table Name</th>
+        <th scope="col">Name in DB</th>
+        <th scope="col">Table ID</th>
+        <th scope="col">No. of Rows</th>
+        <th scope="col">Columns</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for table in tables %}
+      <tr>
+        <td>
+          <a href="{{ url_for('admin.table_view', table_name=table.table_db_name) }}">
+            {{ table.table_name }}
+          </a>
+        </td>
+        <td>{{ table.table_db_name }}</td>
+        <td>{{ table.id }}</td>
+        <td>{{ "{:,}".format(table.nrows) }}</td>
+        <td>{{ table.columns }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="container main mt-5">
+  <hr>
+</div>
+
+<div class="container main mt-5">
+  <h3>Manage Data</h3>
+  <br>
+  <div class="text-center">
+    Form with dropdown menu to delete tables
+  </div>
+</div>
+
+<script>
+  $(document).ready(function () {
+    // Convert to data table
+    $("#all-tables").DataTable({
+    });
+  });
+</script>
+
+{% endblock %}
