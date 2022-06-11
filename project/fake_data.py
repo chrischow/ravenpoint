@@ -32,7 +32,7 @@ definitions = [lorem.sentence() for _ in words]
 
 for i, (word, definition) in enumerate(zip(words, definitions)):
   business_terms.append({
-    'termId': i+1,
+    'termId': i,
     'term': word.title(),
     'definition': definition,
     'businessRules': f"{word.title()} business rules",
@@ -110,8 +110,9 @@ with sqlite3.connect(conn_string) as conn:
       print(tablename)
       table_db_name = secure_filename(tablename).lower()
       temp_df = pd.DataFrame(table)
-      if entity != 'term':
-        temp_df = temp_df.reset_index().rename(columns={'index': 'Id'})
+      if 'Id' in temp_df.columns:
+        temp_df = temp_df.rename(columns={'Id': 'Old_Id'})
+      temp_df = temp_df.reset_index().rename(columns={'index': 'Id'})
       temp_df.to_sql(
         table_db_name, con=conn, if_exists='replace', index=False,
         dtype={f'{entity}Id': 'INTEGER PRIMARY KEY'}

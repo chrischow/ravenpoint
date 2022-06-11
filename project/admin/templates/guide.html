@@ -38,10 +38,7 @@
     First, it's important to note that RavenPoint only accepts data in the form of CSV files. We don't expect any non-tabular data since this is meant to emulate SharePoint's REST API for access to Lists.
   </p>
   <p>
-    Second, ensure the <strong>first column</strong> in your dataset is a column named <code>Id</code> containing unique integers. This is because (1) it is required to accurately emulate SharePoint, which has a default column of the same name, and (2) RavenPoint automatically processes the leftmost column as the primary key.
-  </p>
-  <p>
-    Third, load your data on the <strong>Tables</strong> page:
+    Second, load your data on the <strong>Tables</strong> page:
   </p>
   <ol>
     <li>Hit the <code>Add Table</code> button to launch a pop-up window with a form.</li>
@@ -49,6 +46,9 @@
     <li>Hit Submit and <strong>wait</strong>. Do not click the Submit button in quick succession. Doing so may result in an error writing to the database.</li>
     <li>If the data is loaded successfully, you will be re-directed back to the Admin Panel home page (Tables view) and a success message will appear. If that does not happen, check your data and try again.</li>
   </ol>
+  <p>
+    Note that like SharePoint, RavenPoint automatically creates its own <code>Id</code> column. If you have your own primary key of the same name, it will be renamed to <code>Old_Id</code> and kept in the table.
+  </p>
 </div>
 
 <div class="container mt-5 mb-5">

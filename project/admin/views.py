@@ -49,9 +49,9 @@ def index():
             os.remove(filepath)
 
             # Check that data includes `id` column
-            if 'Id' not in df.columns:
-                flash("<code>id</code> column not found.", 'danger')
-                return redirect(url_for('admin.index'))
+            if 'Id' in df.columns:
+                df = df.rename(columns={'Id': 'Old_Id'})
+                df = df.reset_index().rename(columns={'index': 'Id'})
             
             table_name = form.table_name.data
             table_db_name = secure_filename(form.table_name.data).lower()
@@ -98,7 +98,8 @@ def table_view(id):
         df = pd.read_sql(f'SELECT * FROM {table.table_db_name}', conn)
     
     return render_template('table.html', table=df.to_dict('records'), id=id,
-                            columns=df.columns.tolist(), table_db_name=table.table_db_name)
+                            columns=df.columns.tolist(), table_name=table.table_name,
+                            table_db_name=table.table_db_name)
 
 # Delete table endpoint
 @admin.route('/table/<string:id>/delete', methods=['POST'])

@@ -15,6 +15,9 @@ api = Blueprint(
   template_folder='api_templates'
 )
 
+# Connection string
+conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+
 # Create namespace
 api_namespace = Namespace('_api', 'RavenPoint REST API endpoints')
 
@@ -58,10 +61,63 @@ class XRequestDigestValue(Resource):
     '''X-Request Digest Value endpoint'''
     return {'response': '1111-2222-3333-4444'}
 
+# Endpoint for list metadata
+@api_namespace.route(
+  "/web/Lists(guid'<string:list_id>')",
+  doc={'description': '''Endpoint for getting List metadata. Use `$select` to choose \
+    specific metadata fields to retrieve. Options are `Id`, `ListItemEntityTypeFullName`, \
+    `table_name` (RavenPoint only) and `table_db_name` (RavenPoint only).'''}
+)
+@api_namespace.doc(params={'list_id': 'Simulated SP List ID'})
+class ListMetadata(Resource):
+  @api_namespace.response(200, 'Success: Returns List metadata')
+  @api_namespace.response(400, 'Bad request: Invalid query.')
+  @api_namespace.response(500, 'Internal Server Error')
+  
+  def get(self, list_id):
+    '''RavenPoint list metadata endpoint'''
+    
+    # Check if list exists
+    with sqlite3.connect(conn_string) as conn:
+      all_tables = get_all_table_names(conn)
+    if list_id not in all_tables.id.tolist():
+      raise BadRequest('List does not exist.')
+    
+    # Extract URL params
+    params = {'listId': list_id}
+    for k, v in request.args.items():
+      if k not in ['$select', '$filter', '$expand']:
+        raise BadRequest('Invalid keyword. Use only $select, $filter, or $expand.')
+      params[k] = v
+
+    # Get metadata
+    table = all_tables \
+        .rename(columns={'id': 'Id'}) \
+        .loc[all_tables.id.eq(list_id)].to_dict('records')[0]
+    table_pascal = table['table_db_name'].title().replace('_', '')
+    table['ListItemEntityTypeFullName'] = f'SP.Data.{table_pascal}ListItem'
+
+    # Return all if no specified fields specified
+    if '$select' not in params.keys():
+        return {'d': table}
+    
+    # Extract requested fields
+    fields = params['$select'].split(',')
+    fields = [field.strip() for field in fields]
+    if any([field not in ['ListItemEntityTypeFullName', 'Id', 'table_name', 'table_db_name'] for field in fields]):
+      raise BadRequest('Invalid metadata property. Options: ListItemEntityTypeFullName, Id, table_name, table_db_name.')
+    
+    output  = {'Id': table['Id']}
+    for field in fields:
+      output[field] = table[field]
+
+    return {'d': output}
+
+
 # Endpoint for getting list items
 @api_namespace.route(
   "/web/Lists(guid'<string:list_id>')/items",
-  doc={'description': '''Endpoint for interacting with simulated List (SQLite database). \
+  doc={'description': '''Endpoint for retrieving List items. \
 Currently implemented URL params: `filter`, `select`, and `expand`.
 
 - Use `$select=ListItemEntityTypeFullName` to get the List item entity type.
@@ -72,10 +128,10 @@ Currently implemented URL params: `filter`, `select`, and `expand`.
 @api_namespace.doc(params={'list_id': 'Simulated SP List ID'})
 class ListItems(Resource):
   @api_namespace.response(200, 'Success: Returns requested list items or properties.')
-  @api_namespace.response(400, 'Bad request: List does not exist.')
+  @api_namespace.response(400, 'Bad request: Invalid query.')
   @api_namespace.response(500, 'Internal Server Error')
   def get(self, list_id):
-    '''RavenPoint list properties endpoint'''
+    '''RavenPoint list items endpoint'''
     
     # Extract URL params
     params = {'listId': list_id}
@@ -90,8 +146,8 @@ class ListItems(Resource):
         'Invalid parameters. Check values for your query options (e.g. $select, $filter, $expand).'
       )
 
-    # Check if main list exists
-    with sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')) as conn:
+    # Check if list exists
+    with sqlite3.connect(conn_string) as conn:
       all_tables = get_all_table_names(conn)
     if list_id not in all_tables.id.tolist():
       raise BadRequest('List does not exist.')
@@ -124,10 +180,6 @@ class ListItems(Resource):
     # Process fields selected
     return_cols = []
     if '$select' in params.keys():
-      # Check for ListItemEntityTypeFullName
-      if params['$select'] == 'ListItemEntityTypeFullName':
-        table_pascal = curr_table['table_db_name'].title().replace('_', '')
-        return {'d': f'SP.Data.{table_pascal}ListItem'}
     
       # Extract columns, processing expanded tables (if any)
       select_params = params['$select'].replace(' ', '').split(',')

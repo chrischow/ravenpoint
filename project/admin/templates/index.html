@@ -63,7 +63,7 @@
   </div>
 </div>
 
-<div class="container mt-5">
+<div class="container mt-4">
   <table class="table table-striped" id="all-tables">
     <thead class="thead-dark">
       <tr>
@@ -82,10 +82,12 @@
             {{ table.table_name }}
           </a>
         </td>
-        <td>{{ table.table_db_name }}</td>
-        <td>{{ table.id }}</td>
+        <td><code>{{ table.table_db_name }}</code></td>
+        <td>
+          <code>{{ table.id }}</code>
+        </td>
         <td>{{ "{:,}".format(table.nrows) }}</td>
-        <td>{{ table.columns }}</td>
+        <td><small>{{ table.columns }}</small></td>
       </tr>
       {% endfor %}
     </tbody>
