@@ -6,7 +6,7 @@ import sqlite3
 from flask import Blueprint, request
 from flask_restx import Namespace, Resource, fields
 from project import db, app
-from project.utils import get_all_table_names, parse_odata_filter
+from project.utils import get_all_table_names, get_all_relationships, parse_odata_filter
 from werkzeug.exceptions import BadRequest
 
 # Create blueprint
@@ -146,9 +146,10 @@ class ListItems(Resource):
         'Invalid parameters. Check values for your query options (e.g. $select, $filter, $expand).'
       )
 
-    # Check if list exists
+    # Check if list exists; get all relationships
     with sqlite3.connect(conn_string) as conn:
       all_tables = get_all_table_names(conn)
+      all_rships = get_all_relationships(conn)
     if list_id not in all_tables.id.tolist():
       raise BadRequest('List does not exist.')
 
@@ -167,18 +168,26 @@ class ListItems(Resource):
       }
     
     # EXPAND - Get all tables in query
-    query_tables = [params['table_db_name']]
+    expand_cols = []
     if '$expand' in params.keys():
-      query_tables.extend(params['$expand'].split(','))
+      expand_cols.extend(params['$expand'].split(','))
     
     # Correct errors: some people put column names in $expand, which doesn't matter
-    query_tables = [qt.split('/')[0] if '/' in qt else qt for qt in query_tables]
+    expand_cols = [col.split('/')[0] if '/' in col else col for col in expand_cols]
 
-    # Check that all other tables exist
-    if len(query_tables) > 1:
-      for table in query_tables[1:]:
-        if table not in all_tables.table_db_name.tolist():
-          raise BadRequest(f"{table} does not exist.")
+    # Get other tables
+    joins = {}
+    if len(expand_cols) > 0:
+      for col in expand_cols:
+        rship = all_rships.loc[all_rships.table_left.eq(params['table_db_name']) & all_rships.table_left_on.eq(col)]
+        if rship.shape[0] == 0:
+          raise BadRequest(f"Relationship from field '{col}' does not exist.")
+        else:
+          joins[col] = {
+            'table': rship.table_lookup.iloc[0],
+            'table_pk': rship.table_lookup_on.iloc[0],
+            'columns': []
+          }
 
     # SELECT - Process fields selected
     return_cols = []
@@ -190,12 +199,14 @@ class ListItems(Resource):
       for col in select_params:
         # A forward slash indicates another table exists - extract it
         if '/' in col:
-          join_table, join_col = col.split('/')
-          # Only add tableName.colName if that table is specified in the expand keyword
-          if join_table in query_tables:
-            return_cols.append(f"{join_table}.{join_col}")
-          else:
-            raise BadRequest(f"Table {join_table} not specified in $expand keyword.")
+          expand_col, join_col = col.split('/')
+          # Check if left column in $select was specified in expanded fields
+          if expand_col not in joins:
+            raise BadRequest('$select-ed fields not specified in $expand parameter.')
+          # Check if right (lookup) column in $select exists in its table
+
+          joins[expand_col]['columns'].append(join_col)
+          return_cols.append(f"{joins[expand_col]['table']}.{join_col}")
         else:
           return_cols.append(f"{curr_table['table_db_name']}.{col}")
 
@@ -210,16 +221,11 @@ class ListItems(Resource):
     sql_query.append(f"SELECT {', '.join(return_cols)}")
     sql_query.append(f"FROM {params['table_db_name']}")
     conn = sqlite3.connect(conn_string)
-    for tbl in query_tables[1:]:
-      
-      rships = pd.read_sql(f"SELECT * FROM relationships WHERE \
-        (table_left = '{params['table_db_name']}' and table_right = '{tbl}') OR \
-        (table_left = '{tbl}' and table_right = '{params['table_db_name']}')",
-        con=conn).to_dict('records')[0]
-      if len(rships) == 0:
-        raise BadRequest(f"No relationship specified between tables {params['table_db_name']} and {tbl}.")
-      sql_query.append(f"INNER JOIN {tbl} ON {rships['table_left']}.{rships['table_left_on']} = " + \
-        f"{rships['table_right']}.{rships['table_right_on']}")
+
+    for expand_col, lookup in joins.items():
+      sql_query.append(f"INNER JOIN {lookup['table']} ON {params['table_db_name']}.{expand_col} = {lookup['table']}.{lookup['table_pk']}")
+
+
     sql_query.append(filter_query)
 
     data = pd.read_sql(' '.join(sql_query), con=conn)
@@ -228,7 +234,8 @@ class ListItems(Resource):
 
     # Update params
     params['columns'] = return_cols
-    params['query_tables'] = query_tables
+    params['expand_cols'] = expand_cols
+    params['joins'] = joins
     params['sql_query'] = ' '.join(sql_query)
 
     return { 'diagnostics': params,

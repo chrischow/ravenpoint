@@ -3,6 +3,7 @@ import pandas as pd
 import re
 import sqlite3
 
+from wtforms import ValidationError
 
 # Get all tables in database
 def get_all_table_names(conn):

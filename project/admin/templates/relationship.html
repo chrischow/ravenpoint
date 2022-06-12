@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+  <h1>Edit Relationship</h1>
+  <div class="text-right">
+    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteRelationshipModal">
+      Delete
+    </button>
+  </div>
+  
+  <!-- Modal -->
+  <div class="modal fade text-left" id="deleteRelationshipModal" tabindex="-1" role="dialog" aria-labelledby="deleteRelationshipModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteRelationshipModalLabel">Delete Relationship</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Are you sure you want to delete this relationship? The change cannot be undone.
+          </p>
+          <form action="{{ url_for('admin.relationship_delete', id=id) }}" method="POST">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <input type="submit" class="btn btn-danger" value="Yes, Delete">
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container mt-2">
+  <form method="POST">
+    <div class="form-group">
+      <!-- For CSRF security -->
+      {{ form.hidden_tag() }}
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-6 mt-3">
+            {{ form.table_left.label }} {{ form.table_left(class='form-control') }}
+          </div>
+          <div class="col-6 mt-3">
+            {{ form.table_left_on.label }}
+            {{ form.table_left_on(class='form-control') }}
+          </div>
+          <div class="col-6 mt-3">
+            {{ form.table_lookup.label }}
+            {{ form.table_lookup(class='form-control') }}
+          </div>
+          <div class="col-6 mt-3">
+            {{ form.table_lookup_on.label }} {{ form.table_lookup_on(class='form-control') }}
+          </div>
+          <div class="col-12 mt-3">
+            {{ form.description.label }}
+            {{ form.description(class='form-control') }}
+          </div>
+          <div class="col-12 mt-3 text-right">
+            <a href="{{ url_for('admin.relationships') }}" class="btn btn-secondary">Back</a>
+            {{ form.submit(class='btn btn-primary') }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

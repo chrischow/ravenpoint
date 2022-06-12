@@ -13,10 +13,10 @@ class UploadData(FlaskForm):
     submit = SubmitField('Submit')
 
 class EditRelationship(FlaskForm):
-    table_left = StringField('Table 1 Name', [DataRequired(), NotEqualTo('table_right')])
-    table_left_on = StringField('Table 1 Column', [DataRequired()])
-    table_right = StringField('Table 2 Name', [DataRequired()])
-    table_right_on = StringField('Table 2 Column', [DataRequired()])
+    table_left = StringField('Table Name', [DataRequired(), NotEqualTo('table_lookup')])
+    table_left_on = StringField('Table Column', [DataRequired()])
+    table_lookup = StringField('Lookup Table', [DataRequired()])
+    table_lookup_on = StringField('Lookup Table Column', [DataRequired()])
     description = StringField('Description')
 
     submit = SubmitField('Submit')

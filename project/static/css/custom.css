@@ -1,5 +1,21 @@
+body {
+  overflow-x: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 
 /* Tables */
 th, td {
   white-space: no-wrap;
+}
+
+.table-container {
+  overflow-x: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.table-container::-webkit-scrollbar {
+  display: none;
 }

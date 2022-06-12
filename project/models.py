@@ -21,13 +21,13 @@ class Relationship(db.Model):
   rship_id = db.Column(db.Integer, primary_key=True)
   table_left = db.Column(db.String(128))
   table_left_on = db.Column(db.String(128))
-  table_right = db.Column(db.String(128))
-  table_right_on = db.Column(db.String(128))
+  table_lookup = db.Column(db.String(128))
+  table_lookup_on = db.Column(db.String(128))
   description = db.Column(db.String(255))
 
-  def __init__(self, table_left, table_left_on, table_right, table_right_on, description=''):
+  def __init__(self, table_left, table_left_on, table_lookup, table_lookup_on, description=''):
     self.table_left = table_left
     self.table_left_on = table_left_on
-    self.table_right = table_right
-    self.table_right_on = table_right_on
+    self.table_lookup = table_lookup
+    self.table_lookup_on = table_lookup_on
     self.description = description

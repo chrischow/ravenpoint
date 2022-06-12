@@ -135,13 +135,13 @@ def relationships():
             # Extract form data
             table_left = form.table_left.data
             table_left_on = form.table_left_on.data
-            table_right = form.table_right.data
-            table_right_on = form.table_right_on.data
+            table_lookup = form.table_lookup.data
+            table_lookup_on = form.table_lookup_on.data
             description = form.description.data
 
             # Create new relationship
-            new_rship = Relationship(table_left, table_left_on, table_right, 
-                                     table_right_on, description)
+            new_rship = Relationship(table_left, table_left_on, table_lookup, 
+                                     table_lookup_on, description)
             
             # Commit changes
             try:
@@ -156,6 +156,49 @@ def relationships():
 
     return render_template('relationships.html', form=form,
                            relationships=all_relationships.to_dict('records'))
+
+@admin.route('/relationship/<int:id>', methods=['GET', 'POST'])
+def relationship(id):
+
+    # Initialise form
+    form = EditRelationship()
+
+    # Retrieve item
+    rship = Relationship.query.get(id)
+
+    if request.method == 'GET':
+        form.table_left.data = rship.table_left
+        form.table_left_on.data = rship.table_left_on
+        form.table_lookup.data = rship.table_lookup
+        form.table_lookup_on.data = rship.table_lookup_on
+        form.description.data = rship.description
+
+    if request.method == 'POST' and form.validate_on_submit():
+        # Extract form data
+        rship.table_left = form.table_left.data
+        rship.table_left_on = form.table_left_on.data
+        rship.table_lookup = form.table_lookup.data
+        rship.table_lookup_on = form.table_lookup_on.data
+        rship.description = form.description.data
+        db.session.commit()
+        return redirect(url_for('admin.relationships'))
+
+    return render_template('relationship.html', form=form, id=id)
+
+@admin.route('/relationship/<int:id>/delete', methods=['POST'])
+def relationship_delete(id):
+    # Delete id
+    rship = Relationship.query.get(id)
+    
+    # Run delete query
+    try:
+        db.session.delete(rship)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: Could not delete relationship ID={rship.rship_id}. \n{e}', 'danger')
+        return redirect(url_for('admin.relationships'))
+    return redirect(url_for('admin.relationships'))
 
 @admin.route('/guide', methods=['GET'])
 def guide():

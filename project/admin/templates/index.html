@@ -13,6 +13,7 @@
 
 <div class="container mt-4">
   <h2>Tables</h2>
+  <p>Click the table name to view the table's data and delete it.</p>
   <button type="button" class="btn btn-primary mt-3" data-toggle="modal" data-target="#addTableModal">
     Add Table
   </button>
@@ -64,34 +65,36 @@
 </div>
 
 <div class="container mt-4">
-  <table class="table table-striped" id="all-tables">
-    <thead class="thead-dark">
-      <tr>
-        <th scope="col">Table Name</th>
-        <th scope="col">Name in DB</th>
-        <th scope="col">Table ID</th>
-        <th scope="col">No. of Rows</th>
-        <th scope="col">Columns</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for table in tables %}
-      <tr>
-        <td>
-          <a href="{{ url_for('admin.table_view', id=table.id) }}">
-            {{ table.table_name }}
-          </a>
-        </td>
-        <td><code>{{ table.table_db_name }}</code></td>
-        <td>
-          <code>{{ table.id }}</code>
-        </td>
-        <td>{{ "{:,}".format(table.nrows) }}</td>
-        <td><small>{{ table.columns }}</small></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-container">
+    <table class="table table-striped" id="all-tables">
+      <thead class="thead-dark">
+        <tr>
+          <th scope="col">Table Name</th>
+          <th scope="col">Name in DB</th>
+          <th scope="col">Table ID</th>
+          <th scope="col">No. of Rows</th>
+          <th scope="col">Columns</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for table in tables %}
+        <tr>
+          <td>
+            <a href="{{ url_for('admin.table_view', id=table.id) }}">
+              {{ table.table_name }}
+            </a>
+          </td>
+          <td><code>{{ table.table_db_name }}</code></td>
+          <td>
+            <code>{{ table.id }}</code>
+          </td>
+          <td>{{ "{:,}".format(table.nrows) }}</td>
+          <td><small>{{ table.columns }}</small></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>

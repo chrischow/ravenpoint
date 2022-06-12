@@ -5,7 +5,7 @@
 <div class="container mt-4">
   <h1>Table Relationships</h1>
   <p>
-    For managing relationships among the tables in RavenPoint.
+    For managing relationships among the tables in RavenPoint. Click the relationship ID to edit/delete the relationship.
   </p>
   <button type="button" class="btn btn-primary mt-3" data-toggle="modal" data-target="#addTableModal">
     Add Relationship
@@ -34,11 +34,11 @@
                     {{ form.table_left_on(class='form-control') }}
                   </div>
                   <div class="col-6 mt-3">
-                    {{ form.table_right.label }}
-                    {{ form.table_right(class='form-control') }}
+                    {{ form.table_lookup.label }}
+                    {{ form.table_lookup(class='form-control') }}
                   </div>
                   <div class="col-6 mt-3">
-                    {{ form.table_right_on.label }} {{ form.table_right_on(class='form-control') }}
+                    {{ form.table_lookup_on.label }} {{ form.table_lookup_on(class='form-control') }}
                   </div>
                   <div class="col-12 mt-3">
                     {{ form.description.label }}
@@ -64,21 +64,25 @@
     <thead class="thead-dark">
       <tr>
         <th scope="col">ID</th>
-        <th scope="col">Table 1</th>
-        <th scope="col">Table 1 Column</th>
-        <th scope="col">Table 2 Column</th>
-        <th scope="col">Table 2</th>
+        <th scope="col">Table</th>
+        <th scope="col">Table Column (FK)</th>
+        <th scope="col">Lookup Table Column</th>
+        <th scope="col">Lookup Table</th>
         <th scope="col">Description</th>
       </tr>
     </thead>
     <tbody>
       {% for rship in relationships %}
       <tr>
-        <td>{{ rship.rship_id }}</td>
+        <td>
+          <a href="{{ url_for('admin.relationship', id=rship.rship_id) }}">
+          {{ rship.rship_id }}
+          </a>
+        </td>
         <td>{{ rship.table_left }}</td>
         <td>{{ rship.table_left_on }}</td>
-        <td>{{ rship.table_right_on }}</td>
-        <td>{{ rship.table_right }}</td>
+        <td>{{ rship.table_lookup_on }}</td>
+        <td>{{ rship.table_lookup }}</td>
         <td>{{ rship.description }}</td>
       </tr>
       {% endfor %}
