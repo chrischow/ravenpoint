@@ -6,7 +6,7 @@ import sqlite3
 from flask import Blueprint, request
 from flask_restx import Namespace, Resource, fields
 from project import db, app
-from project.utils import get_all_table_names
+from project.utils import get_all_table_names, parse_odata_filter
 from werkzeug.exceptions import BadRequest
 
 # Create blueprint
@@ -160,24 +160,27 @@ class ListItems(Resource):
     # If no params are given, return 10 rows of data
     if not params.get('$select') and not params.get('$filter') and not params.get('$expand'):
       with sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')) as conn:
-        df = pd.read_sql(f"SELECT * FROM {params['table_db_name']} LIMIT 10", conn)
+        df = pd.read_sql(f"SELECT * FROM {params['table_db_name']}", conn)
       return {
-        'message': 'No query keywords found. Returning first 10 rows.',
+        'listId': list_id,
         'value': df.to_dict('records')
       }
     
-    # Get all tables in query
+    # EXPAND - Get all tables in query
     query_tables = [params['table_db_name']]
     if '$expand' in params.keys():
       query_tables.extend(params['$expand'].split(','))
     
-    # Check that all other tables exist
-    # if len(query_tables) > 1:
-    #   for table in query_tables[1:]:
-    #     if table not in all_tables.table_db_name.tolist():
-    #       raise BadRequest(f"{table} does not exist.")
+    # Correct errors: some people put column names in $expand, which doesn't matter
+    query_tables = [qt.split('/')[0] if '/' in qt else qt for qt in query_tables]
 
-    # Process fields selected
+    # Check that all other tables exist
+    if len(query_tables) > 1:
+      for table in query_tables[1:]:
+        if table not in all_tables.table_db_name.tolist():
+          raise BadRequest(f"{table} does not exist.")
+
+    # SELECT - Process fields selected
     return_cols = []
     if '$select' in params.keys():
     
@@ -191,17 +194,42 @@ class ListItems(Resource):
           # Only add tableName.colName if that table is specified in the expand keyword
           if join_table in query_tables:
             return_cols.append(f"{join_table}.{join_col}")
+          else:
+            raise BadRequest(f"Table {join_table} not specified in $expand keyword.")
         else:
           return_cols.append(f"{curr_table['table_db_name']}.{col}")
 
+    # FILTER - Process filter string
+    if '$filter' in params.keys():
+      filter_query = f"WHERE {parse_odata_filter(params['$filter'])}"
+    else:
+      filter_query = ''
 
+    # Prepare SQL query
+    sql_query = []
+    sql_query.append(f"SELECT {', '.join(return_cols)}")
+    sql_query.append(f"FROM {params['table_db_name']}")
+    conn = sqlite3.connect(conn_string)
+    for tbl in query_tables[1:]:
+      
+      rships = pd.read_sql(f"SELECT * FROM relationships WHERE \
+        (table_left = '{params['table_db_name']}' and table_right = '{tbl}') OR \
+        (table_left = '{tbl}' and table_right = '{params['table_db_name']}')",
+        con=conn).to_dict('records')[0]
+      if len(rships) == 0:
+        raise BadRequest(f"No relationship specified between tables {params['table_db_name']} and {tbl}.")
+      sql_query.append(f"INNER JOIN {tbl} ON {rships['table_left']}.{rships['table_left_on']} = " + \
+        f"{rships['table_right']}.{rships['table_right_on']}")
+    sql_query.append(filter_query)
+
+    data = pd.read_sql(' '.join(sql_query), con=conn)
+    print(data)
+    conn.close()
 
     # Update params
     params['columns'] = return_cols
     params['query_tables'] = query_tables
-    
-    output = f"SELECT {', '.join(params['columns'])} \
-FROM {curr_table['table_db_name']} \
-INNER JOIN "
-    params['sql_query'] = output
-    return params
+    params['sql_query'] = ' '.join(sql_query)
+
+    return { 'diagnostics': params,
+    'value': data.to_dict('records') }

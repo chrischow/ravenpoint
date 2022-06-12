@@ -121,7 +121,7 @@ def table_delete(id):
     return redirect(url_for('admin.index'))
         
 
-@admin.route('/relationships', methods=['GET'])
+@admin.route('/relationships', methods=['GET', 'POST'])
 def relationships():
 
     # Initialise form
@@ -151,6 +151,8 @@ def relationships():
                 db.session.rollback()
                 flash(f"Failed to load data into database:\n{e}", 'danger')
                 return redirect(url_for('admin.relationships'))
+            
+            return redirect(url_for('admin.relationships'))
 
     return render_template('relationships.html', form=form,
                            relationships=all_relationships.to_dict('records'))

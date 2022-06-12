@@ -54,5 +54,6 @@ python app.py
 ```
 
 ## Resources
+- OData query operators: [Microsoft documentation](https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/use-odata-query-operations-in-sharepoint-rest-requests)
 - Parser for OData filters: [odata-query](https://github.com/gorilla-co/odata-query)
 - NotEqualTo Validator: [wtforms-validators](https://github.com/akhilharihar/wtforms-validators)

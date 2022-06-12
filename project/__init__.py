@@ -29,7 +29,7 @@ from project.admin.views import admin
 # Define API
 api_extension = Api(
   api,
-  title='RavenPoint REST API',
+  title='RavenPoint API',
   version='1.0',
   description='SharePoint REST API clone for testing Stack 2.0 apps - by Team Raven',
   doc='/doc'
