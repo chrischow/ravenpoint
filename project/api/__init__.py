@@ -160,7 +160,7 @@ class ListItems(Resource):
     curr_table = all_tables.loc[all_tables.id.eq(list_id)].to_dict('records')[0]
     curr_db_table = curr_table['table_db_name']
 
-    # If no params are given, return 10 rows of data
+    # If no params are given, return all data
     if '$select' not in request_keys and '$filter' not in request_keys and '$expand' not in request_keys:
       with sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')) as conn:
         df = pd.read_sql(f"SELECT * FROM {curr_db_table}", conn)
@@ -206,7 +206,6 @@ class ListItems(Resource):
     select_aliases = [f"{curr_db_table}.{col}" for col in params['main_cols']] + \
       [f"{col} AS '{col.replace('.', '__')}'" for col in params['join_cols']]
     
-
     # Prepare SQL query
     sql_query = []
     sql_query.append(f"SELECT {', '.join(select_aliases)}")
