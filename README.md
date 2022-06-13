@@ -24,11 +24,15 @@ In the longer term, when (or if) an internal cloud is made available, RavenPoint
   - `$filter`: For filtering rows by criteria
   - `$expand`: For selecting columns in linked lookup tables
 
+![](./docs/images/ss_ravenpoint_swagger_ui.jpg)
+
 ### Admin Dashboard
 - Upload a CSV file + table name to be stored in a SQLite database
 - Check table metadata (ID, title, columns)
 - Inspect tables
 - Delete tables
+
+![](./docs/images/ss_ravenpoint_admin.jpg)
 
 ## Installation
 First, clone this repository to a local directory.
