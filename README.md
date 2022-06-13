@@ -1,6 +1,15 @@
 # RavenPoint
 A SharePoint REST API clone built in Python (Flask) for testing apps that use SharePoint Lists as a backend for storing data.
 
+<p>
+    <a href="https://www.python.org/">
+        <img src="http://ForTheBadge.com/images/badges/made-with-python.svg">
+    </a>
+    <a href="https://flask.palletsprojects.com/en/2.0.x/">
+        <img src="docs/images/bottled-in-flask.svg">
+    </a>
+</p>
+
 ## Motivation
 There is a huge disparity between the development and production environments for Team Raven's React.js apps due to ******* ******** IT policy. This creates challenges in development.
 
