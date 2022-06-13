@@ -141,13 +141,14 @@ class ListItems(Resource):
     
     # Extract URL params
     params = parse_odata_query(request.args)
-    params['listId'] = list_id
+    if params:
+      params['listId'] = list_id
 
     # Check that all query options have parameters
-    if any([v is None or len(v) == 0 for v in params.values()]):
-      raise BadRequest(
-        'Invalid value(s). Check values for your query options (e.g. $select, $filter, $expand).'
-      )
+    # if any([v is None or len(v) == 0 for v in params.values()]):
+    #   raise BadRequest(
+    #     'Invalid value(s). Check values for your query options (e.g. $select, $filter, $expand).'
+    #   )
 
     # Check if list exists; get all relationships
     with sqlite3.connect(conn_string) as conn:

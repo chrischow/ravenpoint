@@ -108,4 +108,4 @@ The idea is to make minimal changes to the OData query to convert it to SQL. Cur
 For the date functions `day`, `month`, `year`, `hour`, `minute`, `second`, more work needs to be done. Fortunately, SQLite has some [datetime functions](https://www.sqlite.org/lang_datefunc.html) to work with. Preliminary concept:
 
 1. Convert all `datetime'YYYY-MM-DD-...'` strings to `date('YYYY-MM-DD-...')`
-2. Convert all `day/month/year/hour/minute/second([Colname | datetime'YYYY-MM-DD...'])` strings to `strptime([Colname | datetime'YYYY-MM-DD...'], '[%d | %m | %Y | %H | %M | %S]')`
+2. Convert all `day/month/year/hour/minute/second([Colname | datetime'YYYY-MM-DD...'])` strings to `strftime([Colname | datetime'YYYY-MM-DD...'], '[%d | %m | %Y | %H | %M | %S]')`

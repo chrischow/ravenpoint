@@ -182,7 +182,7 @@ def parse_odata_query(query):
     'expand_cols': []
   }
   if not query:
-    return
+    return output
   for query, value in query.items():
     if query == '$filter':
       output['filter_query'] = value
