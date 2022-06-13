@@ -75,6 +75,12 @@ Test queries:
   http://127.0.0.1:5000/ravenpoint/_api/web/Lists(guid'797f269d2c37d29d15a19c40ec49bada')/items?$select=Id,tableTitle,parentDatasetID/datasetTitle,parentDatasetID/dataDomain,parentDatasetID/owner&$expand=parentDatasetID&$filter=substringof('O', parentDatasetID/dataDomain) and substringof('2', parentDatasetID/owner)
   ```
 
+- Multiple expansion:
+
+  ```
+  http://127.0.0.1:5000/ravenpoint/_api/web/Lists(guid'c82cc553edae91adc412ab2723541399')/items?$select=Id,columnTitle,parentTableID/tableTitle,parentTableID/guid,businessTermID/term,businessTermID/source&$expand=parentTableID,businessTermID&$filter=parentTableID/updateFrequency eq 'Daily'
+  ```
+
 #### Approach 1: Convert to SQL
 The idea is to make minimal changes to the OData query to convert it to SQL. Currently, this involves:
 

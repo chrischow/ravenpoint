@@ -74,29 +74,30 @@ for dataset_i in range(10):
       'guid': guid
     })
 
-    for col_i in range(10):
-      columnTitle = f"{tableTitle} column {col_i+1}"
-      columnDescription = lorem.sentence()
-      dataType = get_random_item(dataTypes)
-      businessRules = f"{columnTitle} business rules"
-      parentTableID = table_i
-      isPrimaryKey = True if col_i == 1 else False
-      isForeignKey = False
-      codeTable = ''
-      relatedFactTable = ''
-      businessTermID = get_random_item(business_terms)['termId']
-      columns.append({
-        'columnTitle': columnTitle,
-        'columnDescription': columnDescription,
-        'dataType': dataType,
-        'businessRules': businessRules,
-        'parentTableID': parentTableID,
-        'isPrimaryKey': isPrimaryKey,
-        'isForeignKey': isForeignKey,
-        'codeTable': codeTable,
-        'relatedFactTable': relatedFactTable,
-        'businessTermID': businessTermID
-      })
+for i, row in pd.DataFrame(tables).iterrows():
+  for col_i in range(10):
+    columnTitle = f"{row.tableTitle} column {col_i+1}"
+    columnDescription = lorem.sentence()
+    dataType = get_random_item(dataTypes)
+    businessRules = f"{columnTitle} business rules"
+    parentTableID = i
+    isPrimaryKey = True if col_i == 1 else False
+    isForeignKey = False
+    codeTable = ''
+    relatedFactTable = ''
+    businessTermID = get_random_item(business_terms)['termId']
+    columns.append({
+      'columnTitle': columnTitle,
+      'columnDescription': columnDescription,
+      'dataType': dataType,
+      'businessRules': businessRules,
+      'parentTableID': parentTableID,
+      'isPrimaryKey': isPrimaryKey,
+      'isForeignKey': isForeignKey,
+      'codeTable': codeTable,
+      'relatedFactTable': relatedFactTable,
+      'businessTermID': businessTermID
+    })
 
 # Add to database
 table_names = ['DC Datasets', 'DC Tables',

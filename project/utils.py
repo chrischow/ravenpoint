@@ -111,6 +111,7 @@ class NotEqualTo:
 
       raise ValidationError(message % d)
 
+# Function to parse OData filters
 def parse_odata_filter(query, joins):
   # Replace lookup column with the associated table
   main_col_matches = re.findall('\w+\/', query)
@@ -146,8 +147,6 @@ def parse_odata_filter(query, joins):
       sw_terms[1] = re.sub('[^a-zA-Z0-9]', '', sw_terms[1])
       query = re.sub(match.replace('(', '\(').replace(')', '\)'), f"{sw_terms[0]} LIKE '{sw_terms[1]}%'", query)
       
-      print(query)
-      
   # substringof(string, column)
   matches_so = re.findall('substringof\(.*?\)', query, re.IGNORECASE)
   if len(matches_so) > 0:
@@ -160,15 +159,41 @@ def parse_odata_filter(query, joins):
       query = re.sub(match.replace('(', '\(').replace(')', '\)'), f"{so_terms[1]} LIKE '%{so_terms[0]}%'", query)
   
   # day()
-  
+
   # month()
+  
   # year()
+  
   # hour()
+  
   # minute()
+  
   # second()
+
   return query
 
 
-# Parse startswith
-def parse_startswith(match, s):
-  pass
+# Function to parse OData query
+def parse_odata_query(query):
+  output = {
+    'main_cols': [],
+    'join_cols': [],
+    'filter_query': '',
+    'expand_cols': []
+  }
+  if not query:
+    return
+  for query, value in query.items():
+    if query == '$filter':
+      output['filter_query'] = value
+    else:
+      columns = [v.strip() for v in value.split(',')]
+      if query == '$select':    
+        for column in columns:
+          if '/' in column:
+            output['join_cols'].append(column)
+          else:
+            output['main_cols'].append(column)
+      elif query == '$expand':
+        output['expand_cols'].extend(columns)
+  return output

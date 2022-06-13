@@ -6,7 +6,8 @@ import sqlite3
 from flask import Blueprint, request
 from flask_restx import Namespace, Resource, fields
 from project import db, app
-from project.utils import get_all_table_names, get_all_relationships, parse_odata_filter
+from project.utils import get_all_table_names, get_all_relationships, parse_odata_filter, \
+  parse_odata_query
 from werkzeug.exceptions import BadRequest
 
 # Create blueprint
@@ -133,17 +134,19 @@ class ListItems(Resource):
   def get(self, list_id):
     '''RavenPoint list items endpoint'''
     
-    # Extract URL params
-    params = {'listId': list_id}
-    for k, v in request.args.items():
-      if k not in ['$select', '$filter', '$expand']:
-        raise BadRequest('Invalid keyword. Use only $select, $filter, or $expand.')
-      params[k] = v
+    # Check for invalid keywords
+    request_keys = request.args.keys()
+    if any([key not in ['$select', '$filter', '$expand'] for key in request_keys]):
+      raise BadRequest('Invalid keyword(s). Use only $select, $filter, or $expand.')
     
+    # Extract URL params
+    params = parse_odata_query(request.args)
+    params['listId'] = list_id
+
     # Check that all query options have parameters
     if any([v is None or len(v) == 0 for v in params.values()]):
       raise BadRequest(
-        'Invalid parameters. Check values for your query options (e.g. $select, $filter, $expand).'
+        'Invalid value(s). Check values for your query options (e.g. $select, $filter, $expand).'
       )
 
     # Check if list exists; get all relationships
@@ -155,87 +158,80 @@ class ListItems(Resource):
 
     # Extract table metadata
     curr_table = all_tables.loc[all_tables.id.eq(list_id)].to_dict('records')[0]
-    params['table_name'] = curr_table['table_name']
-    params['table_db_name'] = curr_table['table_db_name']
+    curr_db_table = curr_table['table_db_name']
 
     # If no params are given, return 10 rows of data
-    if not params.get('$select') and not params.get('$filter') and not params.get('$expand'):
+    if '$select' not in request_keys and '$filter' not in request_keys and '$expand' not in request_keys:
       with sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')) as conn:
-        df = pd.read_sql(f"SELECT * FROM {params['table_db_name']}", conn)
+        df = pd.read_sql(f"SELECT * FROM {curr_db_table}", conn)
       return {
         'listId': list_id,
         'value': df.to_dict('records')
       }
     
     # EXPAND - Get all tables in query
-    expand_cols = []
-    if '$expand' in params:
-      expand_cols.extend(params['$expand'].split(','))
-    
-      # Correct errors: some people put column names in $expand, which doesn't matter
-      expand_cols = [col.split('/')[0] if '/' in col else col for col in expand_cols]
-
-      # Get other tables
-      joins = {}
-      if len(expand_cols) > 0:
-        for col in expand_cols:
-          rship = all_rships.loc[all_rships.table_left.eq(params['table_db_name']) & all_rships.table_left_on.eq(col)]
-          if rship.shape[0] == 0:
-            raise BadRequest(f"Relationship from field '{col}' does not exist.")
-          else:
-            joins[col] = {
-              'table': rship.table_lookup.iloc[0],
-              'table_pk': rship.table_lookup_on.iloc[0],
-              'columns': []
-            }
-
-    # SELECT - Process fields selected
-    return_cols = []
-    if '$select' in params:
-    
-      # Extract columns, processing expanded tables (if any)
-      select_params = params['$select'].replace(' ', '').split(',')
+    joins = {}
+    for col in params['expand_cols']:
+      # Check if the column to expand was included in the selected columns
+      if not any([col in join_col for join_col in params['join_cols']]):
+        raise BadRequest(f'Expand column `{col}` not specified in selected columns.')
       
-      for col in select_params:
-        # A forward slash indicates another table exists - extract it
-        if '/' in col:
-          expand_col, join_col = col.split('/')
-          # Check if left column in $select was specified in expanded fields
-          if expand_col not in joins:
-            raise BadRequest('$select-ed fields not specified in $expand parameter.')
-          # Check if right (lookup) column in $select exists in its table
+      # Add the Id column
+      if not any([f'{col}/Id' in join_col for join_col in params['join_cols']]):
+        params['join_cols'] = [f'{col}/Id'] + params['join_cols']
+      print(curr_db_table, col)
+      rship = all_rships.loc[all_rships.table_left.eq(curr_db_table) & \
+        all_rships.table_left_on.eq(col)]
+      if rship.shape[0] == 0:
+        raise BadRequest(f"Relationship from field '{col}' does not exist.")
+      else:
+        joins[col] = {
+          'table': rship.table_lookup.iloc[0],
+          'table_pk': rship.table_lookup_on.iloc[0]
+        }
 
-          joins[expand_col]['columns'].append(join_col)
-          return_cols.append(f"{joins[expand_col]['table']}.{join_col}")
-        else:
-          return_cols.append(f"{curr_table['table_db_name']}.{col}")
+    # Process joins data
+    for i, col in enumerate(params['join_cols']):
+      lookup_col, lookup_table_col = col.split('/')
+      if not lookup_col in params['expand_cols']:
+        raise BadRequest(f'Lookup field {lookup_col} not specified in $expand parameter.')
+      params['join_cols'][i] = params['join_cols'][i].replace(
+        lookup_col + '/', joins[lookup_col]['table'] + '.'
+      )
 
-    # FILTER - Process filter string
-    if '$filter' in params:
-      filter_query = f"WHERE {parse_odata_filter(params['$filter'], joins)}"
-    else:
-      filter_query = ''
+    # Process filter
+    params['filter_query'] = parse_odata_filter(params['filter_query'], joins)
+
+    # Add aliases to lookup tables
+    select_aliases = [f"{curr_db_table}.{col}" for col in params['main_cols']] + \
+      [f"{col} AS '{col.replace('.', '__')}'" for col in params['join_cols']]
+    
 
     # Prepare SQL query
     sql_query = []
-    sql_query.append(f"SELECT {', '.join(return_cols)}")
-    sql_query.append(f"FROM {params['table_db_name']}")
+    sql_query.append(f"SELECT {', '.join(select_aliases)}")
+    sql_query.append(f"FROM {curr_db_table}")
     conn = sqlite3.connect(conn_string)
 
-    for expand_col, lookup in joins.items():
-      sql_query.append(f"INNER JOIN {lookup['table']} ON {params['table_db_name']}.{expand_col} = {lookup['table']}.{lookup['table_pk']}")
+    for expand_col, lookup_data in joins.items():
+      sql_query.append(f"INNER JOIN {lookup_data['table']}" + \
+        f" ON {curr_db_table}.{expand_col} = {lookup_data['table']}.{lookup_data['table_pk']}")
 
+    sql_query.append(f"WHERE {params['filter_query']}")
 
-    sql_query.append(filter_query)
-
+    # Query database and process data
     data = pd.read_sql(' '.join(sql_query), con=conn)
+    nested_cols = data.columns[data.columns.str.contains('__', regex=False)]
+    nested_cols = list(set([col.split('__')[0] for col in nested_cols]))
+    for nested_col in nested_cols:
+      sub_cols = data.columns[data.columns.str.contains(nested_col + '__')]
+      data[nested_col] = data[sub_cols].apply(lambda x: {k.replace(f'{nested_col}__', ''): v for k, v in zip(x.index, x.values)}, axis=1)
+      data = data.drop(sub_cols, axis=1)
+
     # print(data)
     conn.close()
 
     # Update params
-    params['columns'] = return_cols
-    params['expand_cols'] = expand_cols
-    params['joins'] = joins
     params['sql_query'] = ' '.join(sql_query)
 
     return { 'diagnostics': params,
