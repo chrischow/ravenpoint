@@ -111,9 +111,17 @@ class NotEqualTo:
 
       raise ValidationError(message % d)
 
-def parse_odata_filter(query):
+def parse_odata_filter(query, joins):
+  # Replace lookup column with the associated table
+  main_col_matches = re.findall('\w+\/', query)
+  main_col_replacements = []
+  for match in main_col_matches:
+    main_col_replacements.append(joins[match[:-1]]['table'])
+  for match, replacement in zip(main_col_matches, main_col_replacements):
+    query = re.sub(match, replacement + '.', query)
+  
   # Replace slashes with dots
-  query = query.replace('/', '.')
+  # query = query.replace('/', '.')
   # lt
   query = query.replace(' lt ', ' < ')
   # le
@@ -127,32 +135,40 @@ def parse_odata_filter(query):
   # ne
   query = query.replace(' ne ', ' != ')
   # startswith(column, string)
-  matches_sw = re.match('startswith\(.*?\)', query.lower())
-  if matches_sw:
-    span_sw = matches_sw.span()
-    sw_query = query[span_sw[0]:span_sw[1]]
-    # Extract text between brackets
-    sw_terms = re.sub('.*\(', '', sw_query)
-    sw_terms = re.sub('\).*', '', sw_terms)
-    sw_terms = [s.strip() for s in sw_terms.split(',')]
-    sw_terms[1] = re.sub('[^a-zA-Z0-9]', '', sw_terms[1])
-    query = re.sub(sw_query.replace('(', '\(').replace(')', '\)'), f"{sw_terms[0]} LIKE '{sw_terms[1]}%'", query)
+  query = re.sub('startsWith', 'startswith', query, re.IGNORECASE)
+  matches_sw = re.findall('startswith\(.*?\)', query)
+  if len(matches_sw) > 0:
+    for match in matches_sw:
+      # Extract text between brackets
+      sw_terms = re.sub('.*\(', '', match)
+      sw_terms = re.sub('\).*', '', sw_terms)
+      sw_terms = [s.strip() for s in sw_terms.split(',')]
+      sw_terms[1] = re.sub('[^a-zA-Z0-9]', '', sw_terms[1])
+      query = re.sub(match.replace('(', '\(').replace(')', '\)'), f"{sw_terms[0]} LIKE '{sw_terms[1]}%'", query)
+      
+      print(query)
       
   # substringof(string, column)
-  matches_so = re.search('substringof\(.*?\)', query.lower())
-  if matches_so:
-    span_so = matches_so.span()
-    so_query = query[span_so[0]:span_so[1]]
-    # Extract text between brackets
-    so_terms = re.sub('.*\(', '', so_query)
-    so_terms = re.sub('\).*', '', so_terms)
-    so_terms = [s.strip() for s in so_terms.split(',')]
-    so_terms[0] = re.sub('[^a-zA-Z0-9]', '', so_terms[0])
-    query = re.sub(so_query.replace('(', '\(').replace(')', '\)'), f"{so_terms[1]} LIKE '%{so_terms[0]}%'", query)
+  matches_so = re.findall('substringof\(.*?\)', query, re.IGNORECASE)
+  if len(matches_so) > 0:
+    for match in matches_so:
+      # Extract text between brackets
+      so_terms = re.sub('.*\(', '', match)
+      so_terms = re.sub('\).*', '', so_terms)
+      so_terms = [s.strip() for s in so_terms.split(',')]
+      so_terms[0] = re.sub('[^a-zA-Z0-9]', '', so_terms[0])
+      query = re.sub(match.replace('(', '\(').replace(')', '\)'), f"{so_terms[1]} LIKE '%{so_terms[0]}%'", query)
+  
   # day()
+  
   # month()
   # year()
   # hour()
   # minute()
   # second()
   return query
+
+
+# Parse startswith
+def parse_startswith(match, s):
+  pass

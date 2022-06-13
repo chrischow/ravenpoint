@@ -57,3 +57,33 @@ python app.py
 - OData query operators: [Microsoft documentation](https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/use-odata-query-operations-in-sharepoint-rest-requests)
 - Parser for OData filters: [odata-query](https://github.com/gorilla-co/odata-query)
 - NotEqualTo Validator: [wtforms-validators](https://github.com/akhilharihar/wtforms-validators)
+
+## Notes
+
+### Logic for OData Filter Parser
+Test queries:
+
+- Starts with:
+
+  ```
+  http://127.0.0.1:5000/ravenpoint/_api/web/Lists(guid'797f269d2c37d29d15a19c40ec49bada')/items?$select=Id,tableTitle,parentDatasetID/datasetTitle,parentDatasetID/dataDomain,parentDatasetID/owner&$expand=parentDatasetID&$filter=startswith(parentDatasetID/dataDomain,'O') and startswith(parentDatasetID/owner,'B')
+  ```
+
+- Substring of:
+
+  ```
+  http://127.0.0.1:5000/ravenpoint/_api/web/Lists(guid'797f269d2c37d29d15a19c40ec49bada')/items?$select=Id,tableTitle,parentDatasetID/datasetTitle,parentDatasetID/dataDomain,parentDatasetID/owner&$expand=parentDatasetID&$filter=substringof('O', parentDatasetID/dataDomain) and substringof('2', parentDatasetID/owner)
+  ```
+
+#### Approach 1: Convert to SQL
+The idea is to make minimal changes to the OData query to convert it to SQL. Currently, this involves:
+
+1. Converting `lookupColumn/` to `rightTableDbName/`
+2. Replacing operators:
+  - E.g. ` le ` to ` < `
+  - E.g. ` ne ` to ` != `
+3. Replacing functions: `startswith` and `substringof`
+  1. Extract parameters between the brackets
+  2. Re-write them as `Column LIKE string%` and `Column LIKE %string%` respectively
+
+For the date functions `day`, `month`, `year`, `hour`, `minute`, `second`, more work needs to be done. Fortunately, SQLite has some [datetime functions](https://www.sqlite.org/lang_datefunc.html) to work with.

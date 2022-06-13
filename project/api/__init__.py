@@ -169,29 +169,29 @@ class ListItems(Resource):
     
     # EXPAND - Get all tables in query
     expand_cols = []
-    if '$expand' in params.keys():
+    if '$expand' in params:
       expand_cols.extend(params['$expand'].split(','))
     
-    # Correct errors: some people put column names in $expand, which doesn't matter
-    expand_cols = [col.split('/')[0] if '/' in col else col for col in expand_cols]
+      # Correct errors: some people put column names in $expand, which doesn't matter
+      expand_cols = [col.split('/')[0] if '/' in col else col for col in expand_cols]
 
-    # Get other tables
-    joins = {}
-    if len(expand_cols) > 0:
-      for col in expand_cols:
-        rship = all_rships.loc[all_rships.table_left.eq(params['table_db_name']) & all_rships.table_left_on.eq(col)]
-        if rship.shape[0] == 0:
-          raise BadRequest(f"Relationship from field '{col}' does not exist.")
-        else:
-          joins[col] = {
-            'table': rship.table_lookup.iloc[0],
-            'table_pk': rship.table_lookup_on.iloc[0],
-            'columns': []
-          }
+      # Get other tables
+      joins = {}
+      if len(expand_cols) > 0:
+        for col in expand_cols:
+          rship = all_rships.loc[all_rships.table_left.eq(params['table_db_name']) & all_rships.table_left_on.eq(col)]
+          if rship.shape[0] == 0:
+            raise BadRequest(f"Relationship from field '{col}' does not exist.")
+          else:
+            joins[col] = {
+              'table': rship.table_lookup.iloc[0],
+              'table_pk': rship.table_lookup_on.iloc[0],
+              'columns': []
+            }
 
     # SELECT - Process fields selected
     return_cols = []
-    if '$select' in params.keys():
+    if '$select' in params:
     
       # Extract columns, processing expanded tables (if any)
       select_params = params['$select'].replace(' ', '').split(',')
@@ -211,8 +211,8 @@ class ListItems(Resource):
           return_cols.append(f"{curr_table['table_db_name']}.{col}")
 
     # FILTER - Process filter string
-    if '$filter' in params.keys():
-      filter_query = f"WHERE {parse_odata_filter(params['$filter'])}"
+    if '$filter' in params:
+      filter_query = f"WHERE {parse_odata_filter(params['$filter'], joins)}"
     else:
       filter_query = ''
 
@@ -229,7 +229,7 @@ class ListItems(Resource):
     sql_query.append(filter_query)
 
     data = pd.read_sql(' '.join(sql_query), con=conn)
-    print(data)
+    # print(data)
     conn.close()
 
     # Update params
