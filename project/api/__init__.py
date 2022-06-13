@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import sqlite3
 
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 from flask_restx import Namespace, Resource, fields
 from project import db, app
 from project.utils import get_all_table_names, get_all_relationships, parse_odata_filter, \
@@ -234,5 +234,10 @@ class ListItems(Resource):
     # Update params
     params['sql_query'] = ' '.join(sql_query)
 
-    return { 'diagnostics': params,
-    'value': data.to_dict('records') }
+    # Allow cross-origin
+    output = {
+      'diagnostics': params,
+      'value': data.to_dict('records')
+    }
+    # response.headers.add('Access-Control-Allow-Origin', '*')
+    return output

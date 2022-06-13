@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 # Initialise app
 app = Flask(__name__)
-CORS(app)
+
 
 # Get base directory
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -20,6 +20,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['RESTPLUS_MASK_SWAGGER'] = False
 app.config['SWAGGER_UI_DOC_EXPANSION'] = 'list'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'files')
+
+# CORS
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 db = SQLAlchemy(app)
 Migrate(app, db)
