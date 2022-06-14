@@ -180,7 +180,6 @@ class ListItems(Resource):
       # Add the Id column
       if not any([f'{col}/Id' in join_col for join_col in params['join_cols']]):
         params['join_cols'] = [f'{col}/Id'] + params['join_cols']
-      print(curr_db_table, col)
       rship = all_rships.loc[all_rships.table_left.eq(curr_db_table) & \
         all_rships.table_left_on.eq(col)]
       if rship.shape[0] == 0:
@@ -198,14 +197,14 @@ class ListItems(Resource):
         raise BadRequest(f'Lookup field {lookup_col} not specified in $expand parameter.')
       params['join_cols'][i] = params['join_cols'][i].replace(
         lookup_col + '/', joins[lookup_col]['table'] + '.'
-      )
+      ) + f" AS '{lookup_col}__{lookup_table_col}'"
 
     # Process filter
     params['filter_query'] = parse_odata_filter(params['filter_query'], joins)
 
     # Add aliases to lookup tables
     select_aliases = [f"{curr_db_table}.{col}" for col in params['main_cols']] + \
-      [f"{col} AS '{col.replace('.', '__')}'" for col in params['join_cols']]
+      params['join_cols']
     
     # Prepare SQL query
     sql_query = []
@@ -217,7 +216,8 @@ class ListItems(Resource):
       sql_query.append(f"INNER JOIN {lookup_data['table']}" + \
         f" ON {curr_db_table}.{expand_col} = {lookup_data['table']}.{lookup_data['table_pk']}")
 
-    sql_query.append(f"WHERE {params['filter_query']}")
+    if params['filter_query']:
+      sql_query.append(f"WHERE {params['filter_query']}")
 
     # Query database and process data
     data = pd.read_sql(' '.join(sql_query), con=conn)

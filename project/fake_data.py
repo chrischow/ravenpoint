@@ -33,7 +33,7 @@ definitions = [lorem.sentence() for _ in words]
 for i, (word, definition) in enumerate(zip(words, definitions)):
   business_terms.append({
     'termId': i,
-    'term': word.title(),
+    'Title': word.title(),
     'definition': definition,
     'businessRules': f"{word.title()} business rules",
     'source': 'Raven dictionary'
@@ -48,7 +48,7 @@ for dataset_i in range(10):
   pointOfContact = f"{owner} Staff {(dataset_i % 4) + 1}"
   dataDomain = get_random_item(data_domains)
   datasets.append({
-    'datasetTitle': datasetTitle,
+    'Title': datasetTitle,
     'useCases': useCases,
     'owner': owner,
     'pointOfContact': pointOfContact,
@@ -66,17 +66,17 @@ for dataset_i in range(10):
     hashed_table = md5(tableTitle.encode())
     guid = hashed_table.hexdigest()
     tables.append({
-      'tableTitle': tableTitle,
+      'Title': tableTitle,
       'tableDescription': tableDescription,
       'updateFrequency': updateFrequency,
-      'parentDatasetID': parentDatasetID,
+      'parentDataset': parentDatasetID,
       'site': site,
       'guid': guid
     })
 
 for i, row in pd.DataFrame(tables).iterrows():
   for col_i in range(10):
-    columnTitle = f"{row.tableTitle} column {col_i+1}"
+    columnTitle = f"{row.Title} column {col_i+1}"
     columnDescription = lorem.sentence()
     dataType = get_random_item(dataTypes)
     businessRules = f"{columnTitle} business rules"
@@ -87,16 +87,16 @@ for i, row in pd.DataFrame(tables).iterrows():
     relatedFactTable = ''
     businessTermID = get_random_item(business_terms)['termId']
     columns.append({
-      'columnTitle': columnTitle,
+      'Title': columnTitle,
       'columnDescription': columnDescription,
       'dataType': dataType,
       'businessRules': businessRules,
-      'parentTableID': parentTableID,
+      'parentTable': parentTableID,
       'isPrimaryKey': isPrimaryKey,
       'isForeignKey': isForeignKey,
       'codeTable': codeTable,
       'relatedFactTable': relatedFactTable,
-      'businessTermID': businessTermID
+      'businessTerm': businessTermID
     })
 
 # Add to database
