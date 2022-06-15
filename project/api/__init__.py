@@ -168,7 +168,6 @@ class ListItems(Resource):
     
     # EXPAND - Get all tables in query
     joins = {}
-    multijoins = {}
     for col in params['expand_cols']:
       # Check if the column to expand was included in the selected columns
       if not any([col in join_col for join_col in params['join_cols']]):
@@ -176,18 +175,15 @@ class ListItems(Resource):
       
       # Check if relationship exists
       rship = all_rships.loc[all_rships.table_left.eq(curr_db_table) & \
-        all_rships.table_left_on.eq(col)]
-      if rship.shape[0] == 0:
+        all_rships.table_left_on.eq(col)].to_dict('records')[0]
+      if len(rship) == 0:
         raise BadRequest(f"Relationship from field '{col}' does not exist.")
       else:
         joins[col] = {
-          'table': rship.table_lookup.iloc[0],
-          'table_pk': rship.table_lookup_on.iloc[0]
+          'table': rship['table_lookup'],
+          'table_pk': rship['table_lookup_on'],
+          'is_multi': rship['is_multi']
         }
-
-      # Check if the column to expand is a multi-lookup or single lookup
-      if df[col].str.contains(',').sum() > 0:
-        multijoins[col] = joins[col]
 
     # Process joins data
     for i, col in enumerate(params['join_cols']):
@@ -209,36 +205,70 @@ class ListItems(Resource):
     sql_query = []
     sql_query.append(f"SELECT {', '.join(select_aliases)}")
     sql_query.append(f"FROM {curr_db_table}")
-    conn = sqlite3.connect(conn_string)
 
+    # If single lookup, do a left join; otherwise, left join the junction table first
+    multi_cols = []
     for expand_col, lookup_data in joins.items():
-      sql_query.append(f"LEFT JOIN {lookup_data['table']}" + \
-        f" ON {curr_db_table}.{expand_col} = {lookup_data['table']}.{lookup_data['table_pk']}")
+      lookup_table = lookup_data['table']
+      if lookup_data['is_multi'] == 0:
+        sql_query.append(f"LEFT JOIN {lookup_data['table']}" + \
+          f" ON {curr_db_table}.{expand_col} = {lookup_data['table']}.{lookup_data['table_pk']}")
+      else:
+        junction_table = f"{curr_db_table}_{lookup_data['table']}"
+        multi_cols.append(expand_col)
+        sql_query.append(
+          f"LEFT JOIN {junction_table} " + 
+          f"ON {curr_db_table}.Id = {junction_table}.{curr_db_table}_pk " +
+          f"LEFT JOIN {lookup_table} " +
+          f"ON {junction_table}.{lookup_table}_pk = {lookup_table}.Id"
+        )
 
     if params['filter_query']:
       sql_query.append(f"WHERE {params['filter_query']}")
 
     # Query database and process data
-    data = pd.read_sql(' '.join(sql_query), con=conn)
+    with sqlite3.connect(conn_string) as conn:
+      data = pd.read_sql(' '.join(sql_query), con=conn)
     nested_cols = data.columns[data.columns.str.contains('__', regex=False)]
     nested_cols = list(set([col.split('__')[0] for col in nested_cols]))
+    nested_cols = [col for col in nested_cols if not col in multi_cols]
+
+    # Function to handle Id and Title
+    def clean_id_and_title(value):
+      if pd.isnull(value) or value is None:
+        return ''
+      if type(value) in [float, int]:
+        return int(value)
+      if type(value) == str:
+        return str(value)
+
+    # Process multi-lookup columns first
+    if len(multi_cols) > 0:
+      for multi_col in multi_cols:
+        sub_cols = data.columns[data.columns.str.contains(multi_col + '__')]
+        data[multi_col] = data[sub_cols].apply(lambda x: {k.replace(f'{multi_col}__', ''): clean_id_and_title(v) for k, v in zip(x.index, x.values)}, axis=1)
+        data = data.drop(sub_cols, axis=1)
+    
+    # Merge multi-lookup values
+    merge_cols = [col for col in data.columns if not col in multi_cols]
+    data = data.groupby(merge_cols).agg(lambda x: x.tolist()).reset_index()
+    for multi_col in multi_cols:
+      data[multi_col] = data[multi_col].apply(lambda x: [] if all([elem['Id'] == '' for elem in x]) else x)
+    
+    # Process single lookup columns
     for nested_col in nested_cols:
       sub_cols = data.columns[data.columns.str.contains(nested_col + '__')]
-      data[nested_col] = data[sub_cols].apply(lambda x: {k.replace(f'{nested_col}__', ''): v for k, v in zip(x.index, x.values)}, axis=1)
+      data[nested_col] = data[sub_cols].apply(lambda x: {k.replace(f'{nested_col}__', ''): clean_id_and_title(v) for k, v in zip(x.index, x.values)}, axis=1)
       data = data.drop(sub_cols, axis=1)
-
-    # print(data)
-    conn.close()
 
     # Update diagnostic params
     params['sql_query'] = ' '.join(sql_query)
     params['joins'] = joins
-    params['multijoins'] = multijoins
 
     # Allow cross-origin
     output = {
       'diagnostics': params,
       'value': data.to_dict('records')
     }
-    # response.headers.add('Access-Control-Allow-Origin', '*')
+
     return output
