@@ -170,6 +170,8 @@ When some query involving the multi-lookup table is concerned:
   - ... LEFT JOIN `dc_business_terms` with the required columns, since we only want terms that were listed in the columns
 3. **Filter:** Use whatever filters there were - it's fine
 4. **Post-processing in pandas:**
-  - Group by all columns other than the requested columns from `dc_business_terms` (i.e. Id and Title at most)
+  - Process multi-lookup columns into a single column with dictionaries first
+  - Group rows by all columns other than the requested columns from `dc_business_terms` (i.e. Id and Title at most)
   - Aggregate (`agg`) with `lambda x: x.tolist()`, naming that column with the lookup column's name `businessTerm`
-  
+    - Those with no matching terms should have an empty list
+  - Process single-lookup columns into a single column with dictionaries
