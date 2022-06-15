@@ -58,6 +58,47 @@ flask db migrate -m "Initial migration"
 flask db upgrade
 ```
 
+### Optional Step: Fake Data
+You may opt to add fake data to the database using the provided `fake_data.py` file. These tables were used for testing the [RDO Data Platform data catalogue](https://github.com/chrischow/rdo-data-platform/tree/main/data-catalogue).
+
+```bash
+cd project
+python fake_data.py
+```
+
+Then, add the following relationships:
+
+<table>
+  <thead>
+    <tr>
+      <td>Table Name</td>
+      <td>Table Column</td>
+      <td>Lookup Table</td>
+      <td>Lookup Table Column</td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>dc_tables</td>
+      <td>parentDataset</td>
+      <td>dc_datasets</td>
+      <td>Id</td>
+    </tr>
+    <tr>
+      <td>dc_columns</td>
+      <td>businessTerm</td>
+      <td>dc_business_terms</td>
+      <td>Id</td>
+    </tr>
+    <tr>
+      <td>dc_columns</td>
+      <td>parentTable</td>
+      <td>dc_tables</td>
+      <td>Id</td>
+    </tr>
+  </tbody>
+</table>
+
 ## Usage
 In the `ravenpoint` folder, start the Flask development server:
 
