@@ -71,10 +71,10 @@ Then, add the following relationships:
 <table>
   <thead>
     <tr>
-      <td>Table Name</td>
-      <td>Table Column</td>
-      <td>Lookup Table</td>
-      <td>Lookup Table Column</td>
+      <th>Table Name</th>
+      <th>Table Column</th>
+      <th>Lookup Table</th>
+      <th>Lookup Table Column</th>
     </tr>
   </thead>
   <tbody>
