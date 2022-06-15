@@ -144,12 +144,6 @@ class ListItems(Resource):
     if params:
       params['listId'] = list_id
 
-    # Check that all query options have parameters
-    # if any([v is None or len(v) == 0 for v in params.values()]):
-    #   raise BadRequest(
-    #     'Invalid value(s). Check values for your query options (e.g. $select, $filter, $expand).'
-    #   )
-
     # Check if list exists; get all relationships
     with sqlite3.connect(conn_string) as conn:
       all_tables = get_all_table_names(conn)
@@ -161,10 +155,12 @@ class ListItems(Resource):
     curr_table = all_tables.loc[all_tables.id.eq(list_id)].to_dict('records')[0]
     curr_db_table = curr_table['table_db_name']
 
+    # Extract table
+    with sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')) as conn:
+        df = pd.read_sql(f"SELECT * FROM {curr_db_table}", conn)
+    
     # If no params are given, return all data
     if '$select' not in request_keys and '$filter' not in request_keys and '$expand' not in request_keys:
-      with sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')) as conn:
-        df = pd.read_sql(f"SELECT * FROM {curr_db_table}", conn)
       return {
         'listId': list_id,
         'value': df.to_dict('records')
@@ -172,14 +168,13 @@ class ListItems(Resource):
     
     # EXPAND - Get all tables in query
     joins = {}
+    multijoins = {}
     for col in params['expand_cols']:
       # Check if the column to expand was included in the selected columns
       if not any([col in join_col for join_col in params['join_cols']]):
-        raise BadRequest(f'Expand column `{col}` not specified in selected columns.')
+        raise BadRequest(f"The query to field '{col}' is not valid. The $select query string must specify the target fields and the $expand query string must contain {col}.")
       
-      # Add the Id column
-      if not any([f'{col}/Id' in join_col for join_col in params['join_cols']]):
-        params['join_cols'] = [f'{col}/Id'] + params['join_cols']
+      # Check if relationship exists
       rship = all_rships.loc[all_rships.table_left.eq(curr_db_table) & \
         all_rships.table_left_on.eq(col)]
       if rship.shape[0] == 0:
@@ -189,6 +184,10 @@ class ListItems(Resource):
           'table': rship.table_lookup.iloc[0],
           'table_pk': rship.table_lookup_on.iloc[0]
         }
+
+      # Check if the column to expand is a multi-lookup or single lookup
+      if df[col].str.contains(',').sum() > 0:
+        multijoins[col] = joins[col]
 
     # Process joins data
     for i, col in enumerate(params['join_cols']):
@@ -213,7 +212,7 @@ class ListItems(Resource):
     conn = sqlite3.connect(conn_string)
 
     for expand_col, lookup_data in joins.items():
-      sql_query.append(f"INNER JOIN {lookup_data['table']}" + \
+      sql_query.append(f"LEFT JOIN {lookup_data['table']}" + \
         f" ON {curr_db_table}.{expand_col} = {lookup_data['table']}.{lookup_data['table_pk']}")
 
     if params['filter_query']:
@@ -231,8 +230,10 @@ class ListItems(Resource):
     # print(data)
     conn.close()
 
-    # Update params
+    # Update diagnostic params
     params['sql_query'] = ' '.join(sql_query)
+    params['joins'] = joins
+    params['multijoins'] = multijoins
 
     # Allow cross-origin
     output = {

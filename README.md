@@ -135,7 +135,7 @@ Test queries:
   http://127.0.0.1:5000/ravenpoint/_api/web/Lists(guid'c82cc553edae91adc412ab2723541399')/items?$select=Id,columnTitle,parentTableID/tableTitle,parentTableID/updateFrequency,businessTermID/term,businessTermID/source&$expand=parentTableID,businessTermID&$filter=parentTableID/updateFrequency eq 'daily'
   ```
 
-#### Approach 1: Convert to SQL
+#### Proposed Approach: Convert to SQL
 The idea is to make minimal changes to the OData query to convert it to SQL. Currently, this involves:
 
 1. Converting `lookupColumn/` to `rightTableDbName/`
@@ -150,3 +150,26 @@ For the date functions `day`, `month`, `year`, `hour`, `minute`, `second`, more 
 
 1. Convert all `datetime'YYYY-MM-DD-...'` strings to `date('YYYY-MM-DD-...')`
 2. Convert all `day/month/year/hour/minute/second([Colname | datetime'YYYY-MM-DD...'])` strings to `strftime([Colname | datetime'YYYY-MM-DD...'], '[%d | %m | %Y | %H | %M | %S]')`
+
+### Logic for Multi-value Lookups
+Setup:
+
+1. Users must indicate whether a field is multi-lookup or single-lookup e.g. `businessTerm` (user can select multiple) as the lookup column
+2. If multi-lookup, create a dataframe with:
+  - Left table's indices in a column with the left table's DB name (e.g. `dc_columns_pk`)
+  - Multi-lookup table's values in a column with the lookup table's DB name (e.g. `dc_business_terms_pk`) - this should have a list in every cell
+  - Explode the column `dc_business_terms_pk` into its constituent keys so this column now has one multi-lookup table key per row
+3. Save this as a new table, perhaps `dc_columns_dc_business_terms`
+
+
+When some query involving the multi-lookup table is concerned:
+
+1. **Select:** It's ok to use the selected columns, since we're still taking data from the lookup table
+2. **Expand:** DO NOT use the lookup column `businessTerm` to expand. Instead:
+  - `dc_columns` LEFT JOIN `dc_columns_dc_business_terms` because we want all columns
+  - ... LEFT JOIN `dc_business_terms` with the required columns, since we only want terms that were listed in the columns
+3. **Filter:** Use whatever filters there were - it's fine
+4. **Post-processing in pandas:**
+  - Group by all columns other than the requested columns from `dc_business_terms` (i.e. Id and Title at most)
+  - Aggregate (`agg`) with `lambda x: x.tolist()`, naming that column with the lookup column's name `businessTerm`
+  

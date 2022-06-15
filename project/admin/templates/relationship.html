@@ -53,7 +53,12 @@
             {{ form.table_lookup(class='form-control') }}
           </div>
           <div class="col-6 mt-3">
-            {{ form.table_lookup_on.label }} {{ form.table_lookup_on(class='form-control') }}
+            {{ form.table_lookup_on.label }}
+            {{ form.table_lookup_on(class='form-control') }}
+          </div>
+          <div class="col-12 text-left ml-5 mt-3">
+            {{ form.is_multi(class='form-check-input') }}
+            {{ form.is_multi.label(class='form-check-label') }}
           </div>
           <div class="col-12 mt-3">
             {{ form.description.label }}

@@ -137,11 +137,33 @@ def relationships():
             table_left_on = form.table_left_on.data
             table_lookup = form.table_lookup.data
             table_lookup_on = form.table_lookup_on.data
+            is_multi = form.is_multi.data
             description = form.description.data
 
             # Create new relationship
             new_rship = Relationship(table_left, table_left_on, table_lookup, 
-                                     table_lookup_on, description)
+                                     table_lookup_on, is_multi, description)
+
+            # Create new junction table
+            if is_multi:
+                # Get left table
+                with sqlite3.connect(conn_string) as conn:
+                    df = pd.read_sql(F'SELECT * FROM {table_left}', con=conn)
+                
+                    # Transform lookup table into a junction table
+                    df[table_left_on] = df[table_left_on].str.split(',')
+                    df = df[['Id', table_left_on]].explode(table_left_on)
+                    
+                    # Clean data format and index and column names
+                    df[table_left_on] = pd.to_numeric(df[table_left_on])
+                    df = df.dropna()
+                    df[table_left_on] = df[table_left_on].astype(int)
+                    df = df.reset_index(drop=True).reset_index()
+                    df = df.rename(columns={'Id': f'{table_left}_pk', table_left_on: f'{table_lookup}_pk', 'index': 'Id'})
+
+                    # Save to database
+                    df.to_sql(f'{table_left}_{table_lookup}', con=conn, if_exists='replace', index=False,
+                                dtype={f'{df.columns[0]}': 'INTEGER PRIMARY KEY'})
             
             # Commit changes
             try:
@@ -171,6 +193,7 @@ def relationship(id):
         form.table_left_on.data = rship.table_left_on
         form.table_lookup.data = rship.table_lookup
         form.table_lookup_on.data = rship.table_lookup_on
+        form.is_multi.data = rship.is_multi
         form.description.data = rship.description
 
     if request.method == 'POST' and form.validate_on_submit():
@@ -179,6 +202,7 @@ def relationship(id):
         rship.table_left_on = form.table_left_on.data
         rship.table_lookup = form.table_lookup.data
         rship.table_lookup_on = form.table_lookup_on.data
+        rship.is_multi = form.is_multi.data
         rship.description = form.description.data
         db.session.commit()
         return redirect(url_for('admin.relationships'))
@@ -189,9 +213,12 @@ def relationship(id):
 def relationship_delete(id):
     # Delete id
     rship = Relationship.query.get(id)
-    
+        
     # Run delete query
     try:
+            
+        if rship.is_multi:
+            db.session.execute(f'DROP TABLE {rship.table_left}_{rship.table_lookup}')
         db.session.delete(rship)
         db.session.commit()
     except Exception as e:

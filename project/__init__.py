@@ -22,7 +22,7 @@ app.config['SWAGGER_UI_DOC_EXPANSION'] = 'list'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'files')
 
 # CORS
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 db = SQLAlchemy(app)
 Migrate(app, db)

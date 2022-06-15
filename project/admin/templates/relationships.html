@@ -38,7 +38,12 @@
                     {{ form.table_lookup(class='form-control') }}
                   </div>
                   <div class="col-6 mt-3">
-                    {{ form.table_lookup_on.label }} {{ form.table_lookup_on(class='form-control') }}
+                    {{ form.table_lookup_on.label }}
+                    {{ form.table_lookup_on(class='form-control') }}
+                  </div>
+                  <div class="col-12 text-left ml-5 mt-3">
+                    {{ form.is_multi(class='form-check-input') }}
+                    {{ form.is_multi.label(class='form-check-label') }}
                   </div>
                   <div class="col-12 mt-3">
                     {{ form.description.label }}
@@ -68,6 +73,7 @@
         <th scope="col">Table Column (FK)</th>
         <th scope="col">Lookup Table Column</th>
         <th scope="col">Lookup Table</th>
+        <th scope="col">Multi-Lookup</th>
         <th scope="col">Description</th>
       </tr>
     </thead>
@@ -83,6 +89,7 @@
         <td>{{ rship.table_left_on }}</td>
         <td>{{ rship.table_lookup_on }}</td>
         <td>{{ rship.table_lookup }}</td>
+        <td>{{ rship.is_multi }}</td>
         <td>{{ rship.description }}</td>
       </tr>
       {% endfor %}

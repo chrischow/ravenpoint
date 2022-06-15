@@ -36,7 +36,7 @@ for i, (word, definition) in enumerate(zip(words, definitions)):
     'Title': word.title(),
     'definition': definition,
     'businessRules': f"{word.title()} business rules",
-    'source': 'Raven dictionary'
+    'Source': 'Raven dictionary'
   })
 
 # Create datasets table
@@ -71,7 +71,7 @@ for dataset_i in range(10):
       'updateFrequency': updateFrequency,
       'parentDataset': parentDatasetID,
       'site': site,
-      'guid': guid
+      'guid0': guid
     })
 
 for i, row in pd.DataFrame(tables).iterrows():
@@ -85,7 +85,8 @@ for i, row in pd.DataFrame(tables).iterrows():
     isForeignKey = False
     codeTable = ''
     relatedFactTable = ''
-    businessTermID = get_random_item(business_terms)['termId']
+    term_ids = [str(get_random_item(business_terms)['termId']) for _ in range(int(np.random.choice([0,1,2,3,4])))]
+    businessTermID = ','.join(list(set(term_ids)))
     columns.append({
       'Title': columnTitle,
       'columnDescription': columnDescription,
