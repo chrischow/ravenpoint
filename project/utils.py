@@ -112,7 +112,9 @@ class NotEqualTo:
       raise ValidationError(message % d)
 
 # Function to parse OData filters
-def parse_odata_filter(query, joins):
+def parse_odata_filter(query, joins, curr_db_table):
+  # Replace ID columns
+  query = re.sub('^Id', f'{curr_db_table}.Id', query)
   # Replace lookup column with the associated table
   main_col_matches = re.findall('\w+\/', query)
   main_col_replacements = []

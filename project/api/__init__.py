@@ -200,7 +200,7 @@ class ListItems(Resource):
       ) + f" AS '{lookup_col}__{lookup_table_col}'"
 
     # Process filter
-    params['filter_query'] = parse_odata_filter(params['filter_query'], joins)
+    params['filter_query'] = parse_odata_filter(params['filter_query'], joins, curr_db_table)
 
     # Add aliases to lookup tables
     select_aliases = [f"{curr_db_table}.{col}" for col in params['main_cols']] + \
