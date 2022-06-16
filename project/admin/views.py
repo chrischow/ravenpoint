@@ -1,3 +1,4 @@
+import json
 import os
 from traceback import format_exception_only
 import pandas as pd
@@ -136,7 +137,7 @@ def relationships():
             table_left = form.table_left.data
             table_left_on = form.table_left_on.data
             table_lookup = form.table_lookup.data
-            table_lookup_on = form.table_lookup_on.data
+            table_lookup_on = 'Id'
             is_multi = form.is_multi.data
             description = form.description.data
 
@@ -175,7 +176,11 @@ def relationships():
                 return redirect(url_for('admin.relationships'))
             
             return redirect(url_for('admin.relationships'))
-
+        else:
+            # Print errors
+            for field, error_msg in form.errors.items():
+                for err in error_msg:
+                    print(f"{field}:  {err}")
     return render_template('relationships.html', form=form,
                            relationships=all_relationships.to_dict('records'))
 
@@ -187,12 +192,18 @@ def relationship(id):
 
     # Retrieve item
     rship = Relationship.query.get(id)
+    output = {
+        'table_left': rship.table_left,
+        'table_left_on': rship.table_left_on,
+        'table_lookup': rship.table_lookup,
+        'is_multi': rship.is_multi,
+        'description': rship.description
+    }
 
     if request.method == 'GET':
         form.table_left.data = rship.table_left
         form.table_left_on.data = rship.table_left_on
         form.table_lookup.data = rship.table_lookup
-        form.table_lookup_on.data = rship.table_lookup_on
         form.is_multi.data = rship.is_multi
         form.description.data = rship.description
 
@@ -201,13 +212,13 @@ def relationship(id):
         rship.table_left = form.table_left.data
         rship.table_left_on = form.table_left_on.data
         rship.table_lookup = form.table_lookup.data
-        rship.table_lookup_on = form.table_lookup_on.data
+        rship.table_lookup_on = 'Id'
         rship.is_multi = form.is_multi.data
         rship.description = form.description.data
         db.session.commit()
         return redirect(url_for('admin.relationships'))
 
-    return render_template('relationship.html', form=form, id=id)
+    return render_template('relationship.html', form=form, id=id, rship=json.dumps(output))
 
 @admin.route('/relationship/<int:id>/delete', methods=['POST'])
 def relationship_delete(id):
@@ -230,3 +241,13 @@ def relationship_delete(id):
 @admin.route('/guide', methods=['GET'])
 def guide():
     return render_template('guide.html')
+
+
+@admin.route('/get_tables', methods=['GET'])
+def get_tables():
+    with sqlite3.connect(conn_string) as conn:
+        all_tables = get_all_table_names(conn)
+        table_metadata = get_all_table_metadata(conn, all_tables)
+        table_metadata['columns'] = table_metadata['columns'].str.replace(' ', '', regex=False)
+    
+    return {'data': table_metadata.to_dict('records')}

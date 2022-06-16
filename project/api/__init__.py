@@ -249,11 +249,11 @@ class ListItems(Resource):
         data[multi_col] = data[sub_cols].apply(lambda x: {k.replace(f'{multi_col}__', ''): clean_id_and_title(v) for k, v in zip(x.index, x.values)}, axis=1)
         data = data.drop(sub_cols, axis=1)
     
-    # Merge multi-lookup values
-    merge_cols = [col for col in data.columns if not col in multi_cols]
-    data = data.groupby(merge_cols).agg(lambda x: x.tolist()).reset_index()
-    for multi_col in multi_cols:
-      data[multi_col] = data[multi_col].apply(lambda x: [] if all([elem['Id'] == '' for elem in x]) else x)
+      # Merge multi-lookup values
+      merge_cols = [col for col in data.columns if not col in multi_cols]
+      data = data.groupby(merge_cols).agg(lambda x: x.tolist()).reset_index()
+      for multi_col in multi_cols:
+        data[multi_col] = data[multi_col].apply(lambda x: [] if all([elem['Id'] == '' for elem in x]) else x)
     
     # Process single lookup columns
     for nested_col in nested_cols:

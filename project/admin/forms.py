@@ -2,9 +2,8 @@ import sqlite3
 from flask_wtf import FlaskForm
 from flask_wtf.file import  FileAllowed
 from project import app, db
-from project.utils import NotEqualTo
-from wtforms import StringField, SubmitField, FileField, BooleanField
-from wtforms.validators import DataRequired
+from wtforms import StringField, SubmitField, FileField, BooleanField, SelectField
+from wtforms.validators import DataRequired, InputRequired
 
 class UploadData(FlaskForm):
     csv_file = FileField('Data (CSV file)', [FileAllowed(['csv'], 'CSV files only.')])
@@ -13,10 +12,10 @@ class UploadData(FlaskForm):
     submit = SubmitField('Submit')
 
 class EditRelationship(FlaskForm):
-    table_left = StringField('Table Name', [DataRequired(), NotEqualTo('table_lookup')])
-    table_left_on = StringField('Table Column', [DataRequired()])
-    table_lookup = StringField('Lookup Table', [DataRequired()])
-    table_lookup_on = StringField('Lookup Table Column', [DataRequired()])
+    table_left = SelectField('Table Name', validators=[InputRequired()], validate_choice=False)
+    table_left_on = SelectField('Table Column', validators=[InputRequired()], validate_choice=False)
+    table_lookup = SelectField('Lookup Table', validators=[InputRequired()], validate_choice=False)
+    
     is_multi = BooleanField('This is a Multi-Lookup Column')
     description = StringField('Description')
 

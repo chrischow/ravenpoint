@@ -5,12 +5,14 @@
 <div class="container mt-4">
   <h1>Table Relationships</h1>
   <p>
-    For managing relationships among the tables in RavenPoint. Click the relationship ID to edit/delete the relationship.
+    For managing relationships among the tables in RavenPoint. Click the relationship ID to edit/delete the
+    relationship.
   </p>
   <button type="button" class="btn btn-primary mt-3" data-toggle="modal" data-target="#addTableModal">
     Add Relationship
   </button>
-  <div class="modal fade" id="addTableModal" tabindex="-1" role="dialog" aria-labelledby="addTableModalLabel" aria-hidden="true">
+  <div class="modal fade" id="addTableModal" tabindex="-1" role="dialog" aria-labelledby="addTableModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
       <div class="modal-content">
         <div class="modal-header">
@@ -27,19 +29,27 @@
               <div class="container">
                 <div class="row justify-content-center">
                   <div class="col-6 mt-3">
-                    {{ form.table_left.label }} {{ form.table_left(class='form-control') }}
+                    <label for="table_left">Table Name</label>
+                    <select name="table_left" id="table_left" class="form-control">
+                      <option value="" disabled selected>Select a table:</option>
+                    </select>
                   </div>
                   <div class="col-6 mt-3">
-                    {{ form.table_left_on.label }}
-                    {{ form.table_left_on(class='form-control') }}
+                    <label for="table_left_on">Lookup Column</label>
+                    <select name="table_left_on" id="table_left_on" class="form-control">
+                      <option value="" disabled selected>Select a column:</option>
+                    </select>
                   </div>
                   <div class="col-6 mt-3">
-                    {{ form.table_lookup.label }}
-                    {{ form.table_lookup(class='form-control') }}
+                    <label for="table_lookup">Lookup Table</label>
+                    <select name="table_lookup" id="table_lookup" class="form-control">
+                      <option value="" disabled selected>Select a lookup table:</option>
+                    </select>
                   </div>
                   <div class="col-6 mt-3">
-                    {{ form.table_lookup_on.label }}
-                    {{ form.table_lookup_on(class='form-control') }}
+                    <label for="table_lookup_on">Lookup Table Id</label>
+                    <input type="text" name="table_lookup_on" id="table_lookup_on" value="Id" class="form-control"
+                      disabled>
                   </div>
                   <div class="col-12 text-left ml-5 mt-3">
                     {{ form.is_multi(class='form-check-input') }}
@@ -58,7 +68,6 @@
             </div>
           </form>
         </div>
-        
       </div>
     </div>
   </div>
@@ -82,7 +91,7 @@
       <tr>
         <td>
           <a href="{{ url_for('admin.relationship', id=rship.rship_id) }}">
-          {{ rship.rship_id }}
+            {{ rship.rship_id }}
           </a>
         </td>
         <td>{{ rship.table_left }}</td>
@@ -101,6 +110,59 @@
   $(document).ready(function () {
     // Convert to data table
     $("#all-relationships").DataTable();
+
+    // Retrieve table metadata
+    let tableMetadata = {};
+    fetch('/get_tables')
+      .then(response => response.json())
+      .then(data => {
+        data.data.forEach(elem => {
+          tableMetadata[elem.table_db_name] = {
+            columns: elem.columns,
+            id: elem.id,
+            name: elem.table_name,
+            nrows: 10
+          }
+        });
+
+        let tableNames = Object.keys(tableMetadata);
+        tableNames.sort();
+        tableNames.forEach(table => {
+          $('#table_left').append(
+            `<option value="${table}">${table}</option>`
+          );
+          $('#table_lookup').append(
+            `<option value="${table}">${table}</option>`
+          );
+        })
+      });
+
+    // Change in left table
+    $('#table_left').on('change', () => {
+      // Populate columns
+      let columnOptions = tableMetadata[$('#table_left :selected').val()]['columns'].split(',');
+      columnOptions.sort();
+      $('#table_left_on').empty()
+      $('#table_left_on').append('<option value="" disabled selected>Select a column:</option>');
+      columnOptions.forEach(elem => {
+        $('#table_left_on').append(
+          `<option value="${elem}">${elem}</option>`
+        );
+      });
+
+      // Reset lookup column
+      $('#table_lookup').empty()
+      $('#table_lookup').append('<option value="" disabled selected>Select a lookup table:</option>');
+      let tableNames = Object.keys(tableMetadata);
+      tableNames.forEach(table => {
+        if (table !== $('#table_left :selected').val()) {
+          $('#table_lookup').append(
+            `<option value="${table}">${table}</option>`
+          );
+        }
+      });
+    });
+    
   });
 </script>
 
