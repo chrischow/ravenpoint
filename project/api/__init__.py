@@ -77,7 +77,7 @@ class ListMetadata(Resource):
   
   def get(self, list_id):
     '''RavenPoint list metadata endpoint'''
-    
+    print(request.args.items())
     # Check if list exists
     with sqlite3.connect(conn_string) as conn:
       all_tables = get_all_table_names(conn)
@@ -87,10 +87,10 @@ class ListMetadata(Resource):
     # Extract URL params
     params = {'listId': list_id}
     for k, v in request.args.items():
-      if k not in ['$select', '$filter', '$expand']:
+      if k not in ['$select', '$filter', '$expand', '$top']:
         raise BadRequest('Invalid keyword. Use only $select, $filter, or $expand.')
       params[k] = v
-
+    
     # Get metadata
     table = all_tables \
         .rename(columns={'id': 'Id'}) \
@@ -136,7 +136,7 @@ class ListItems(Resource):
     
     # Check for invalid keywords
     request_keys = request.args.keys()
-    if any([key not in ['$select', '$filter', '$expand'] for key in request_keys]):
+    if any([key not in ['$select', '$filter', '$expand', '$top'] for key in request_keys]):
       raise BadRequest('Invalid keyword(s). Use only $select, $filter, or $expand.')
     
     # Extract URL params
