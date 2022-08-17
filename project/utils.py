@@ -3,6 +3,7 @@ import pandas as pd
 import re
 import sqlite3
 
+from project import app
 from wtforms import ValidationError
 
 # Get all tables in database
@@ -199,3 +200,56 @@ def parse_odata_query(query):
       elif query == '$expand':
         output['expand_cols'].extend(columns)
   return output
+
+# Function to validate create/update query
+conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+def validate_create_update_query(headers, data, list_id, update=False, item_id=None):
+  # 1. Check headers
+  xRequestDigest = headers.get('X-RequestDigest')
+  if xRequestDigest is None:
+    return { 'BadRequest': f"No token provided. Unable to 'authenticate' request." }
+  if update:
+    # Check IF-MATCH
+    ifMatch = headers.get('IF-MATCH')
+    if ifMatch is None or ifMatch != '*':
+      return { 'BadRequest': f"Incorrect value for IF-MATCH header." }
+    # Check X-HTTP-METHOD
+    xHttpMethod = headers.get('X-HTTP-METHOD')
+    if xHttpMethod is None or xHttpMethod != 'MERGE':
+      return { 'BadRequest': f"Incorrect value for X-HTTP-METHOD header." }
+  
+  # 2. Check for metadata
+  metadata = data.get('__metadata')
+  if metadata is None:
+    return { 'BadRequest': 'Missing JSON item: `__metadata`' }
+
+  # 3. Check ListItemEntityTypeFullName (LIETFN)
+  # Check if list exists
+  with sqlite3.connect(conn_string) as conn:
+    all_tables = get_all_table_names(conn)
+  if list_id not in all_tables.id.tolist():
+    return { 'BadRequest': 'List does not exist.' }
+  # Get metadata
+  table = all_tables \
+      .rename(columns={'id': 'Id'}) \
+      .loc[all_tables.id.eq(list_id)].to_dict('records')[0]
+  table_pascal = table['table_db_name'].title().replace('_', '')
+  lietfn = f'SP.Data.{table_pascal}ListItem'
+  # Retrieve metadata from request
+  request_lietfn = metadata.get('type')
+  if request_lietfn is None:
+    return { 'BadRequest': 'Missing ListItemEntityTypeFullName.' }
+  if request_lietfn != lietfn:
+    return { 'BadRequest': 'Incorrect ListItemEntityTypeFullName.' }
+
+  # Check if item exists
+  with sqlite3.connect(conn_string) as conn:
+    df = pd.read_sql(f"SELECT * FROM {table['table_db_name']}", conn)
+  if update and int(item_id) not in df.Id.values:
+    return { 'BadRequest': 'Item does not exist.' }
+  
+  return { 
+    'Success': True,
+    'table': table['table_db_name'],
+    'data': df
+  }

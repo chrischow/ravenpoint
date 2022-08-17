@@ -8,7 +8,7 @@ from flask import Blueprint, request, jsonify
 from flask_restx import Namespace, Resource, fields
 from project import db, app
 from project.utils import get_all_table_names, get_all_relationships, parse_odata_filter, \
-  parse_odata_query
+  parse_odata_query, validate_create_update_query
 from werkzeug.exceptions import BadRequest
 
 # Create blueprint
@@ -160,12 +160,14 @@ create_update_model = api_namespace.model(
 @api_namespace.route(
   "/web/Lists(guid'<string:list_id>')/items",
   doc={'description': '''Endpoint for retrieving List items. \
-Currently implemented URL params: `filter`, `select`, and `expand`.
+Currently implemented URL params: `select`, `expand`, and `filter`.
 
 - Use `$select=ListItemEntityTypeFullName` to get the List item entity type.
 - Use `$select=<columns>` to select columns.
-- Use `$filter=<criteria>` to filter items.
 - Use `$expand=<lookup_table>` to join tables.
+- Use `$filter=<criteria>` to filter items.
+
+The keyword hierarchy is `select` > `expand` > `filter`. Any other combination may result in an error.
   '''})
 @api_namespace.doc(params={'list_id': 'Simulated SP List ID'})
 class ListItems(Resource):
@@ -197,7 +199,7 @@ class ListItems(Resource):
     curr_db_table = curr_table['table_db_name']
 
     # Extract table
-    with sqlite3.connect(app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')) as conn:
+    with sqlite3.connect(conn_string) as conn:
         df = pd.read_sql(f"SELECT * FROM {curr_db_table}", conn)
     
     # If no params are given, return all data
@@ -320,44 +322,102 @@ class ListItems(Resource):
   def post(self, list_id):
     '''Ravenpoint List items endpoint'''
 
-    # Extract request params, headers, and body
-    params = {'listId': list_id}
+    # Extract request headers, and body
     headers = request.headers
     data = request.json
 
-    # 1. Check token
-    xRequestDigest = headers.get('X-RequestDigest')
-    if xRequestDigest is None:
-      raise BadRequest(f"No token provided. Unable to 'authenticate' request.")
+    # Run checks
+    check_reqs = validate_create_update_query(headers, data, list_id)
+    if check_reqs.get('BadRequest'):
+      raise BadRequest(check_reqs.get('BadRequest'))
+    
+    # Get data types
+    df = check_reqs['data']
+    df = df.drop('Id', axis=1)
+    dtypes_lookup = df.dtypes.astype(str).to_dict()
 
-    # 2. Check for metadata
-    metadata = data.get('__metadata')
-    if metadata is None:
-      raise BadRequest('Missing JSON item: `__metadata`')
+    # Prepare INSERT query
+    colnames = []
+    values_clause = []
+    for k, v in data.items():
+      if k in ['Id', '__metadata']:
+        continue
+      data_type = dtypes_lookup.get(k, 'object')
+      colnames.append(k)
+      values_clause.append(f"{v}" if ('int' in data_type or 'float' in data_type) else f"'{v}'")
+    query = f'''INSERT INTO {check_reqs.get('table')} ({', '.join(colnames)}) \
+VALUES ({', '.join(values_clause)})'''
 
-    # 3. Check ListItemEntityTypeFullName (LIETFN)
-    # Check if list exists
+    # Run update
     with sqlite3.connect(conn_string) as conn:
-      all_tables = get_all_table_names(conn)
-    if list_id not in all_tables.id.tolist():
-      raise BadRequest('List does not exist.')
-    # Get metadata
-    table = all_tables \
-        .rename(columns={'id': 'Id'}) \
-        .loc[all_tables.id.eq(list_id)].to_dict('records')[0]
-    table_pascal = table['table_db_name'].title().replace('_', '')
-    lietfn = f'SP.Data.{table_pascal}ListItem'
-    # Retrieve metadata from request
-    request_lietfn = metadata.get('type')
-    if request_lietfn is None:
-      raise BadRequest('Missing ListItemEntityTypeFullName.')
-    if request_lietfn != lietfn:
-      raise BadRequest('Incorrect ListItemEntityTypeFullName.')
-
+      cursor = conn.cursor()
+      try:
+        cursor.execute(query)
+        conn.commit()
+      except Exception as e:
+        print(e)
+        conn.rollback()
+        raise BadRequest(f'Invalid request - data does not match table schema: {e}')
     return {
-      'data': data,
-      'token': xRequestDigest
+      # 'data': data,
+      # 'token': headers.get('X-RequestDigest'),
+      # 'table': check_reqs.get('table'),
+      'query': query,
+      'message': f'Successfully added item.',
     }
 
+@api_namespace.route(
+  "/web/Lists(guid'<string:list_id>')/items(<string:item_id>)",
+  doc={'description': '''Endpoint for updating List items.
+  '''})
+@api_namespace.doc(params={
+  'list_id': 'Simulated SP List ID',
+  'item_id': 'Item to update'
+})
+class UpdateListItems(Resource):
+  # Update item
+  @api_namespace.expect(create_update_model, validate=False)
+  @api_namespace.doc(security='X-RequestDigest')
+  def post(self, list_id, item_id):
+    # Extract request headers, and body
+    headers = request.headers
+    data = request.json
 
-  
+    # Run checks on List, ListItemEntityTypeFullName, and item
+    check_reqs = validate_create_update_query(headers, data, list_id, True, item_id)
+    if check_reqs.get('BadRequest'):
+      raise BadRequest(check_reqs.get('BadRequest'))
+
+    # Get data types
+    df = check_reqs['data']
+    df = df.drop('Id', axis=1)
+    dtypes_lookup = df.dtypes.astype(str).to_dict()
+
+    # Prepare UPDATE query
+    set_clause = []
+    for k, v in data.items():
+      if k in ['Id', '__metadata']:
+        continue
+      data_type = dtypes_lookup.get(k, 'object')
+      set_clause.append(f"{k} = {v}" if ('int' in data_type or 'float' in data_type) else f"{k} = '{v}'")
+    query = f'''UPDATE {check_reqs.get('table')} \
+SET {', '.join(set_clause)} \
+WHERE Id = {item_id}'''
+
+    # Run update
+    with sqlite3.connect(conn_string) as conn:
+      cursor = conn.cursor()
+      try:
+        cursor.execute(query)
+        conn.commit()
+      except Exception as e:
+        conn.rollback()
+        raise BadRequest(f'Invalid request - data does not match table schema: {e}')
+    return {
+      # 'data': data,
+      # 'token': headers.get('X-RequestDigest'),
+      # 'table': check_reqs.get('table'),
+      # 'query': query,
+      'message': f'Successfully updated item {item_id}',
+    }
+    
