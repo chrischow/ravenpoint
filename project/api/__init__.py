@@ -119,7 +119,7 @@ class ListMetadata(Resource):
 # Endpoint for getting list items
 lietfn_model = api_namespace.model(
   'ListItemEntityTypeFullName', {
-    'type': fields.String(description='ListItemEntityTypeFullName provided by Ravenpoint')
+    'type': fields.String(description='Appropriate ListItemEntityTypeFullName for the required list')
   }
 )
 
@@ -128,8 +128,8 @@ objective_model = api_namespace.model(
     '__metadata': fields.Nested(lietfn_model),
     'Title': fields.String(description='Objective title'),
     'objectiveDescription': fields.String(description='Objective description'),
-    'objectiveStartDate': fields.String(description='Objective start date'),
-    'objectiveEndDate': fields.String(description='Objective end date'),
+    'objectiveStartDate': fields.String(description='Objective start date in ISO date format'),
+    'objectiveEndDate': fields.String(description='Objective end date in ISO date format'),
     'owner': fields.String(description='Staff assigned to objective'),
     'team': fields.String(description='Team owning the objective'),
     'frequency': fields.String(description='Monthly, quarterly, or annual'),
@@ -141,8 +141,8 @@ keyresult_model = api_namespace.model(
     '__metadata': fields.Nested(lietfn_model),
     'Title': fields.String(description='Key Result title'),
     'krDescription': fields.String(description='Key Result description'),
-    'krStartDate': fields.String(description='Key Result start date'),
-    'krEndDate': fields.String(description='Key Result end date'),
+    'krStartDate': fields.String(description='Key Result start date in ISO date format'),
+    'krEndDate': fields.String(description='Key Result end date in ISO date format'),
     'minValue': fields.Integer(description='Starting value'),
     'maxValue': fields.Integer(description='Target value'),
     'currentValue': fields.Integer(description='Current value'),
@@ -150,10 +150,21 @@ keyresult_model = api_namespace.model(
   }
 )
 
+update_model = api_namespace.model(
+  'Update', {
+    '__metadata': fields.Nested(lietfn_model),
+    'Title': fields.String(description='LEAVE THIS BLANK'),
+    'updateDate': fields.String(description='Update date in ISO date format'),
+    'updateText': fields.String(description='Body of update'),
+    'parentKrId': fields.Integer(description='ID of parent Key Result')
+  }
+)
+
 create_update_model = api_namespace.model(
   'Create/Update Data (choose appropriate model)', {
     'objective': fields.Nested(objective_model),
-    'keyresult': fields.Nested(keyresult_model)
+    'keyresult': fields.Nested(keyresult_model),
+    'update': fields.Nested(update_model),
   }
 )
 
@@ -167,7 +178,14 @@ Currently implemented URL params: `select`, `expand`, and `filter`.
 - Use `$expand=<lookup_table>` to join tables.
 - Use `$filter=<criteria>` to filter items.
 
-The keyword hierarchy is `select` > `expand` > `filter`. Any other combination may result in an error.
+The URL parameter hierarchy is `select` > `expand` > `filter`. Any other combination may result in an error.
+
+**Notes for POST requests:**
+
+1. URL params are ignored.
+2. An X-RequestDigest value is required. Click the lock to input a value - any value will pass.
+3. The provided payload is for reference only. Choose one of the provided first-level \
+keys as the schema and fill in your own values. Check the models below for more details.
   '''})
 @api_namespace.doc(params={'list_id': 'Simulated SP List ID'})
 class ListItems(Resource):
@@ -175,7 +193,7 @@ class ListItems(Resource):
   @api_namespace.response(400, 'Bad request: Invalid query.')
   @api_namespace.response(500, 'Internal Server Error')
   def get(self, list_id):
-    '''RavenPoint list items endpoint'''
+    '''RavenPoint list items endpoint (Read)'''
     
     # Check for invalid keywords
     request_keys = request.args.keys()
@@ -320,7 +338,7 @@ class ListItems(Resource):
   @api_namespace.expect(create_update_model, validate=False)
   @api_namespace.doc(security='X-RequestDigest')
   def post(self, list_id):
-    '''Ravenpoint List items endpoint'''
+    '''RavenPoint List items endpoint (Create)'''
 
     # Extract request headers, and body
     headers = request.headers
@@ -368,8 +386,7 @@ VALUES ({', '.join(values_clause)})'''
 
 @api_namespace.route(
   "/web/Lists(guid'<string:list_id>')/items(<string:item_id>)",
-  doc={'description': '''Endpoint for updating List items.
-  '''})
+  doc={'description': '''Endpoint for updating List items.'''})
 @api_namespace.doc(params={
   'list_id': 'Simulated SP List ID',
   'item_id': 'Item to update'
@@ -379,6 +396,7 @@ class UpdateListItems(Resource):
   @api_namespace.expect(create_update_model, validate=False)
   @api_namespace.doc(security='X-RequestDigest')
   def post(self, list_id, item_id):
+    '''RavenPoint list items endpoint (Update)'''
     # Extract request headers, and body
     headers = request.headers
     data = request.json
