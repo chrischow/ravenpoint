@@ -1,5 +1,6 @@
 import json
 import os
+import numpy as np
 import pandas as pd
 import sqlite3
 
@@ -22,11 +23,12 @@ conn_string = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
 # Create namespace
 api_namespace = Namespace('_api', 'RavenPoint REST API endpoints')
 
+# Hello world example
 hello_world_model = api_namespace.model(
   'Hello World', {
     'message': fields.String(
       readonly=True,
-      description='Hello World message'
+      description='Hello World test example.'
     )
   }
 )
@@ -42,25 +44,24 @@ class HelloWorld(Resource):
     '''Hello world message endpoint'''
     return hello_world_example
 
-# Endpoint for request digest value
-x_req_digest_model = api_namespace.model(
-  'XRequestDigestModel', {
-    'response': fields.String(
-      readonly=True,
-      description='Returns a simulated X-Request digest value with no expiry.'
-    )
-  }
+# Token endpoint
+@api_namespace.route(
+  '/contextinfo',
+  doc={'description': '''Endpoint for getting X-Request digest value, which is \
+    used in POST requests for creating, updating, and deleting entries.'''}
 )
 
-@api_namespace.route('/contextinfo')
 class XRequestDigestValue(Resource):
-  @api_namespace.marshal_list_with(
-    x_req_digest_model,
-    description='Success: Returns a simulated X-Request digest value with no expiry.')
   @api_namespace.response(500, 'Internal Server Error')
   def post(self):
     '''X-Request Digest Value endpoint'''
-    return {'response': '1111-2222-3333-4444'}
+    return {
+      "d": {
+        "GetContextWebInformation": {
+          "FormDigestValue": "1111-2222-3333-4444"
+        }
+      }
+    }
 
 # Endpoint for list metadata
 @api_namespace.route(
@@ -116,6 +117,46 @@ class ListMetadata(Resource):
 
 
 # Endpoint for getting list items
+lietfn_model = api_namespace.model(
+  'ListItemEntityTypeFullName', {
+    'type': fields.String(description='ListItemEntityTypeFullName provided by Ravenpoint')
+  }
+)
+
+objective_model = api_namespace.model(
+  'Objective', {
+    '__metadata': fields.Nested(lietfn_model),
+    'Title': fields.String(description='Objective title'),
+    'objectiveDescription': fields.String(description='Objective description'),
+    'objectiveStartDate': fields.String(description='Objective start date'),
+    'objectiveEndDate': fields.String(description='Objective end date'),
+    'owner': fields.String(description='Staff assigned to objective'),
+    'team': fields.String(description='Team owning the objective'),
+    'frequency': fields.String(description='Monthly, quarterly, or annual'),
+  }
+)
+
+keyresult_model = api_namespace.model(
+  'Key Result', {
+    '__metadata': fields.Nested(lietfn_model),
+    'Title': fields.String(description='Key Result title'),
+    'krDescription': fields.String(description='Key Result description'),
+    'krStartDate': fields.String(description='Key Result start date'),
+    'krEndDate': fields.String(description='Key Result end date'),
+    'minValue': fields.Integer(description='Starting value'),
+    'maxValue': fields.Integer(description='Target value'),
+    'currentValue': fields.Integer(description='Current value'),
+    'parentObjective': fields.Integer(description='ID of parent Objective')
+  }
+)
+
+create_update_model = api_namespace.model(
+  'Create/Update Data (choose appropriate model)', {
+    'objective': fields.Nested(objective_model),
+    'keyresult': fields.Nested(keyresult_model)
+  }
+)
+
 @api_namespace.route(
   "/web/Lists(guid'<string:list_id>')/items",
   doc={'description': '''Endpoint for retrieving List items. \
@@ -268,7 +309,55 @@ class ListItems(Resource):
     # Allow cross-origin
     output = {
       'diagnostics': params,
-      'value': data.to_dict('records')
+      'value': data.replace({np.nan: None}).to_dict('records')
     }
 
     return output
+  
+  # Update item
+  @api_namespace.expect(create_update_model, validate=False)
+  @api_namespace.doc(security='X-RequestDigest')
+  def post(self, list_id):
+    '''Ravenpoint List items endpoint'''
+
+    # Extract request params, headers, and body
+    params = {'listId': list_id}
+    headers = request.headers
+    data = request.json
+
+    # 1. Check token
+    xRequestDigest = headers.get('X-RequestDigest')
+    if xRequestDigest is None:
+      raise BadRequest(f"No token provided. Unable to 'authenticate' request.")
+
+    # 2. Check for metadata
+    metadata = data.get('__metadata')
+    if metadata is None:
+      raise BadRequest('Missing JSON item: `__metadata`')
+
+    # 3. Check ListItemEntityTypeFullName (LIETFN)
+    # Check if list exists
+    with sqlite3.connect(conn_string) as conn:
+      all_tables = get_all_table_names(conn)
+    if list_id not in all_tables.id.tolist():
+      raise BadRequest('List does not exist.')
+    # Get metadata
+    table = all_tables \
+        .rename(columns={'id': 'Id'}) \
+        .loc[all_tables.id.eq(list_id)].to_dict('records')[0]
+    table_pascal = table['table_db_name'].title().replace('_', '')
+    lietfn = f'SP.Data.{table_pascal}ListItem'
+    # Retrieve metadata from request
+    request_lietfn = metadata.get('type')
+    if request_lietfn is None:
+      raise BadRequest('Missing ListItemEntityTypeFullName.')
+    if request_lietfn != lietfn:
+      raise BadRequest('Incorrect ListItemEntityTypeFullName.')
+
+    return {
+      'data': data,
+      'token': xRequestDigest
+    }
+
+
+  
