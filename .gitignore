@@ -1,5 +1,6 @@
 migrations/
 __pycache__/
-project/__pycache__/
-
+project/__pycache__
+project/api/__pycache__
 project/data/
+*/__pycache__
