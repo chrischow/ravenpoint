@@ -31,13 +31,23 @@ Migrate(app, db)
 from project.api import api, api_namespace
 from project.admin.views import admin
 
+# Define authorisations
+authorisations = {
+  'X-RequestDigest': {
+    'type': 'apiKey',
+    'in': 'header',
+    'name': 'X-RequestDigest'
+  }
+}
+
 # Define API
 api_extension = Api(
   api,
   title='RavenPoint API',
   version='1.0',
   description='SharePoint REST API clone for testing Stack 2.0 apps - by Team Raven',
-  doc='/doc'
+  doc='/doc',
+  authorizations=authorisations
 )
 
 api_extension.add_namespace(api_namespace)
