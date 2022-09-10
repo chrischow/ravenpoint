@@ -8,7 +8,7 @@ from flask import Blueprint, request, jsonify
 from flask_restx import Namespace, Resource, fields
 from project import db, app
 from project.utils import get_all_table_names, get_all_relationships, parse_odata_filter, \
-  parse_odata_query, validate_create_update_query
+  parse_odata_query, validate_create_update_query, validate_delete_query
 from werkzeug.exceptions import BadRequest
 
 # Create blueprint
@@ -56,11 +56,8 @@ class XRequestDigestValue(Resource):
   def post(self):
     '''X-Request Digest Value endpoint'''
     return {
-      "d": {
-        "GetContextWebInformation": {
-          "FormDigestValue": "1111-2222-3333-4444"
-        }
-      }
+      "FormDigestValue": "1111-2222-3333-4444",
+      "other": "metadata"
     }
 
 # Endpoint for list metadata
@@ -360,6 +357,9 @@ class ListItems(Resource):
     for k, v in data.items():
       if k in ['Id', '__metadata']:
         continue
+      # Convert implicit lookup column Id
+      if (len(k) > 2) and ('/' not in k) and (k[-2:] == 'Id') and (k != 'parentKrId'):
+        k = k[:-2]
       data_type = dtypes_lookup.get(k, 'object')
       colnames.append(k)
       values_clause.append(f"{v}" if ('int' in data_type or 'float' in data_type) else f"'{v}'")
@@ -391,51 +391,80 @@ VALUES ({', '.join(values_clause)})'''
   'list_id': 'Simulated SP List ID',
   'item_id': 'Item to update'
 })
+
 class UpdateListItems(Resource):
   # Update item
   @api_namespace.expect(create_update_model, validate=False)
   @api_namespace.doc(security='X-RequestDigest')
   def post(self, list_id, item_id):
-    '''RavenPoint list items endpoint (Update)'''
+    '''RavenPoint list items endpoint (Update/Delete)'''
     # Extract request headers, and body
     headers = request.headers
     data = request.json
 
-    # Run checks on List, ListItemEntityTypeFullName, and item
-    check_reqs = validate_create_update_query(headers, data, list_id, True, item_id)
-    if check_reqs.get('BadRequest'):
-      raise BadRequest(check_reqs.get('BadRequest'))
+    # Update query
+    if headers.get('X-Http-Method') == 'MERGE':
+      # Run checks on List, ListItemEntityTypeFullName, and item
+      check_reqs = validate_create_update_query(headers, data, list_id, True, item_id)
+      if check_reqs.get('BadRequest'):
+        raise BadRequest(check_reqs.get('BadRequest'))
+      
+      # Get data types
+      df = check_reqs['data']
+      df = df.drop('Id', axis=1)
+      dtypes_lookup = df.dtypes.astype(str).to_dict()
 
-    # Get data types
-    df = check_reqs['data']
-    df = df.drop('Id', axis=1)
-    dtypes_lookup = df.dtypes.astype(str).to_dict()
+      # Prepare UPDATE query
+      set_clause = []
+      for k, v in data.items():
+        if k in ['Id', '__metadata']:
+          continue
+        # Convert implicit lookup column Id
+        if (len(k) > 2) and ('/' not in k) and (k[-2:] == 'Id') and (k != 'parentKrId'):
+          k = k[:-2]
+        data_type = dtypes_lookup.get(k, 'object')
+        set_clause.append(f"{k} = {v}" if ('int' in data_type or 'float' in data_type) else f"{k} = '{v}'")
+      query = f'''UPDATE {check_reqs.get('table')} \
+  SET {', '.join(set_clause)} \
+  WHERE Id = {item_id}'''
 
-    # Prepare UPDATE query
-    set_clause = []
-    for k, v in data.items():
-      if k in ['Id', '__metadata']:
-        continue
-      data_type = dtypes_lookup.get(k, 'object')
-      set_clause.append(f"{k} = {v}" if ('int' in data_type or 'float' in data_type) else f"{k} = '{v}'")
-    query = f'''UPDATE {check_reqs.get('table')} \
-SET {', '.join(set_clause)} \
-WHERE Id = {item_id}'''
+      # Run update
+      with sqlite3.connect(conn_string) as conn:
+        cursor = conn.cursor()
+        try:
+          cursor.execute(query)
+          conn.commit()
+        except Exception as e:
+          conn.rollback()
+          raise BadRequest(f'Invalid request - data does not match table schema: {e}')
+      return {
+        # 'data': data,
+        # 'token': headers.get('X-RequestDigest'),
+        # 'table': check_reqs.get('table'),
+        # 'query': query,
+        'message': f'Successfully updated item {item_id}',
+      }
+    else:
+      # Run checks on List, ListItemEntityTypeFullName, and item
+      check_reqs = validate_delete_query(headers, list_id, item_id)
+      if check_reqs.get('BadRequest'):
+        raise BadRequest(check_reqs.get('BadRequest'))
 
-    # Run update
-    with sqlite3.connect(conn_string) as conn:
-      cursor = conn.cursor()
-      try:
-        cursor.execute(query)
-        conn.commit()
-      except Exception as e:
-        conn.rollback()
-        raise BadRequest(f'Invalid request - data does not match table schema: {e}')
-    return {
-      # 'data': data,
-      # 'token': headers.get('X-RequestDigest'),
-      # 'table': check_reqs.get('table'),
-      # 'query': query,
-      'message': f'Successfully updated item {item_id}',
-    }
-    
+      # Create query
+      query = f'''DELETE FROM {check_reqs.get('table')} WHERE Id = {item_id}'''
+      # Run update
+      with sqlite3.connect(conn_string) as conn:
+        cursor = conn.cursor()
+        try:
+          cursor.execute(query)
+          conn.commit()
+        except Exception as e:
+          conn.rollback()
+          raise BadRequest(f'Invalid request - could not delete item: {e}')
+      return {
+        # 'data': data,
+        # 'token': headers.get('X-RequestDigest'),
+        # 'table': check_reqs.get('table'),
+        # 'query': query,
+        'message': f'Successfully delete item {item_id}',
+      }
