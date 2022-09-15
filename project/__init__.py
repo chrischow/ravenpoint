@@ -1,3 +1,4 @@
+import logging
 import os
 
 from flask import Flask
@@ -9,6 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 # Initialise app
 app = Flask(__name__)
 
+# logging.basicConfig(filename='logs.log', level=logging.DEBUG, format=f'%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
 
 # Get base directory
 basedir = os.path.abspath(os.path.dirname(__file__))
