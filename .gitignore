@@ -4,4 +4,5 @@ project/__pycache__
 project/api/__pycache__
 project/data/*
 !project/data/rokr_data_demo.py
+!project/data/fake_data.py
 */__pycache__

@@ -46,12 +46,22 @@ In the longer term, when (or if) an internal cloud is made available, RavenPoint
 ## Installation
 First, clone this repository to a local directory.
 
-Second, use the `requirements.txt` file to install the dependencies in a virtual environment.
+```bash
+# Clone repo
+git clone https://github.com/chrischow/ravenpoint.git
+```
 
-Third, navigate to the `ravenpoint` folder and set up the DB:
+Second, use the `conda-requirements.txt` file to install the dependencies in a new virtual environment.
 
 ```bash
 cd ravenpoint
+conda create --name ravenpoint --file conda-requirements.txt
+```
+
+Then, activate the environment and initialise the database.
+
+```bash
+conda activate ravenpoint
 
 flask db init
 flask db migrate -m "Initial migration"
@@ -59,53 +69,30 @@ flask db upgrade
 ```
 
 ### Optional Step: Fake Data
-You may opt to add fake data to the database using the provided `fake_data.py` file. These tables were used for testing the [RDO Data Platform data catalogue](https://github.com/chrischow/rdo-data-platform/tree/main/data-catalogue).
+You may opt to add fake data to the database. You will need to write your own code, but two examples have been provided:
 
-```bash
-cd project
-python fake_data.py
-```
+- `fake_data.py`: Demo data for the [RDO Data Catalogue](https://github.com/chrischow/rdo-data-catalogue).
+- `rokr_demo_data.py`: Demo data for [ROKR](https://github.com/chrischow/rokr).
 
-Then, add the following relationships:
+Be sure to add the supporting relationships via the admin panel.
 
-<table>
-  <thead>
-    <tr>
-      <th>Table Name</th>
-      <th>Table Column</th>
-      <th>Lookup Table</th>
-      <th>Lookup Table Column</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>dc_tables</td>
-      <td>parentDataset</td>
-      <td>dc_datasets</td>
-      <td>Id</td>
-    </tr>
-    <tr>
-      <td>dc_columns</td>
-      <td>businessTerm</td>
-      <td>dc_business_terms</td>
-      <td>Id</td>
-    </tr>
-    <tr>
-      <td>dc_columns</td>
-      <td>parentTable</td>
-      <td>dc_tables</td>
-      <td>Id</td>
-    </tr>
-  </tbody>
-</table>
+| Fake Data | Table Name | Table Column | Lookup Table | Lookup Table Column |
+| :-------- | :--------- | :----------- | :----------- | :------------------ |
+| `fake_data.py` | dc_tables | parentDataset | dc_datasets | Id |
+| `fake_data.py` | dc_columns | businessTerm | dc_business_terms | Id |
+| `fake_data.py` | dc_columns | parentTable | dc_tables | Id |
+| `rokr_demo_data.py` | rokr_key_results | parentObjective | rokr_objectives | Id |
 
 ## Usage
-In the `ravenpoint` folder, start the Flask development server:
+In the `ravenpoint` folder, activate the environment and start the Flask development server:
 
 ```bash
 cd ravenpoint
+conda activate ravenpoint
 python app.py
 ```
+
+The RavenPoint admin panel should be running on `http://127.0.0.1:5000/`.
 
 ## Resources
 - OData query operators: [Microsoft documentation](https://docs.microsoft.com/en-us/sharepoint/dev/sp-add-ins/use-odata-query-operations-in-sharepoint-rest-requests)
