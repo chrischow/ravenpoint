@@ -2,5 +2,6 @@ migrations/
 __pycache__/
 project/__pycache__
 project/api/__pycache__
-project/data/
+project/data/*
+!project/data/rokr_data_demo.py
 */__pycache__
