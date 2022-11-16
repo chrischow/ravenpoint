@@ -9,13 +9,12 @@ COPY . .
 EXPOSE 5000
 
 
-RUN pip install odata-query flask-smorest-sqlalchemy-odata Werkzeug==2.1.2 Flask==2.1.2 flask-restx==0.5.1
+# RUN pip install odata-query flask-smorest-sqlalchemy-odata Werkzeug==2.1.2 Flask==2.1.2 flask-restx==0.5.1
 
 
 RUN conda config --append channels conda-forge  &&\ 
 conda config --append channels anaconda &&\ 
-conda create --name ravenpoint &&\
-conda install -y -c conda-forge --file conda-requirements.txt
+conda env create -f environment.yml
 # RUN conda config --append channels anaconda 
 
 # RUN conda create --name ravenpoint 
@@ -36,9 +35,7 @@ flask db upgrade
 # RUN pip install -r requirements.txt
 
 
-
-CMD ["python", "app.py"]
-
+CMD /bin/bash -c "source activate ravenpoint && python3 app.py"
 
 
 

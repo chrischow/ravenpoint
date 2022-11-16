@@ -7,7 +7,7 @@ services:
         dockerfile: Dockerfile
       ports:
         - "5000:5000"
-      command: python app.py
+      command: /bin/bash -c "source activate ravenpoint && python3 app.py"
 
 
    
