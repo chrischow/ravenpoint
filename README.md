@@ -67,6 +67,31 @@ flask db init
 flask db migrate -m "Initial migration"
 flask db upgrade
 ```
+### Optional: Installation with Docker
+first, download and install docker desktop by following the instructions in the link below
+[Docker desktop installation and setup for windows](https://docs.docker.com/desktop/install/windows-install/)
+[Docker desktop installation and setup for mac](https://docs.docker.com/desktop/install/mac-install/)
+[Docker desktop installation and setup for linux](https://docs.docker.com/desktop/install/linux-install/)
+
+second, clone this repository to a local directory.
+```bash
+# Clone repo
+git clone https://github.com/chrischow/ravenpoint.git
+```
+
+third,navigate to the repository folder .
+```bash
+# navigate to repo
+cd ravenpoint
+```
+
+fourth,open your terminal and type in the command below to start ravenpoint in docker.
+```bash
+# start raven point with docker
+docker compose up 
+```
+
+
 
 ### Optional Step: Fake Data
 You may opt to add fake data to the database. You will need to write your own code, but two examples have been provided:
