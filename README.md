@@ -97,7 +97,7 @@ docker compose up
 You may opt to add fake data to the database. You will need to write your own code, but two examples have been provided:
 
 - `fake_data.py`: Demo data for the [RDO Data Catalogue](https://github.com/chrischow/rdo-data-catalogue).
-- `rokr_demo_data.py`: Demo data for [ROKR](https://github.com/chrischow/rokr).
+- `rokr_data_demo.py`: Demo data for [ROKR](https://github.com/chrischow/rokr).
 
 Be sure to add the supporting relationships via the admin panel.
 
@@ -106,7 +106,7 @@ Be sure to add the supporting relationships via the admin panel.
 | `fake_data.py` | dc_tables | parentDataset | dc_datasets | Id |
 | `fake_data.py` | dc_columns | businessTerm | dc_business_terms | Id |
 | `fake_data.py` | dc_columns | parentTable | dc_tables | Id |
-| `rokr_demo_data.py` | rokr_key_results | parentObjective | rokr_objectives | Id |
+| `rokr_data_demo.py` | rokr_key_results | parentObjective | rokr_objectives | Id |
 
 ## Usage
 In the `ravenpoint` folder, activate the environment and start the Flask development server:

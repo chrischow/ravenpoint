@@ -1,6 +1,5 @@
 import json
 import os
-from traceback import format_exception_only
 import pandas as pd
 import sqlite3
 
