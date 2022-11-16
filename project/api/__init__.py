@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import sqlite3
+import time
 
 from flask import Blueprint, request, jsonify
 from flask_restx import Namespace, Resource, fields
@@ -191,6 +192,7 @@ class ListItems(Resource):
   @api_namespace.response(500, 'Internal Server Error')
   def get(self, list_id):
     '''RavenPoint list items endpoint (Read)'''
+    # time.sleep(2)
     
     # Check for invalid keywords
     request_keys = request.args.keys()
