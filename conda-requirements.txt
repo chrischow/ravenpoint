@@ -21,10 +21,10 @@ dnspython
 email-validator
 entrypoints
 executing
-flask
+# flask
 flask-cors
 flask-migrate
-flask-restx
+# flask-restx
 flask-smorest
 # flask-smorest-sqlalchemy-odata
 flask-sqlalchemy

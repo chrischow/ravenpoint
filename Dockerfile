@@ -1,4 +1,4 @@
-FROM  continuumio/anaconda3
+FROM  continuumio/miniconda3
 
 # FROM python:3-alpine3.10
 
@@ -9,7 +9,7 @@ COPY . .
 EXPOSE 5000
 
 
-RUN pip install odata-query flask-smorest-sqlalchemy-odata werkzeug==2.1.2
+RUN pip install odata-query flask-smorest-sqlalchemy-odata Werkzeug==2.1.2 Flask==2.1.2 flask-restx==0.5.1
 
 
 RUN conda config --append channels conda-forge  &&\ 
