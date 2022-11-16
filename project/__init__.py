@@ -23,6 +23,7 @@ app.config['RESTPLUS_MASK_SWAGGER'] = False
 app.config['SWAGGER_UI_DOC_EXPANSION'] = 'list'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'files')
 
+print(basedir)
 # CORS
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
