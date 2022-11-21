@@ -42,6 +42,7 @@ def index():
             csv_file = request.files['csv_file']
             filename = secure_filename(csv_file.filename)
             filepath = os.path.join(upload_dir, filename)
+            print(filepath)
             csv_file.save(filepath)
             
             # Read data and cleanup
