@@ -68,10 +68,10 @@ flask db migrate -m "Initial migration"
 flask db upgrade
 ```
 ### Optional: Installation with Docker
-first, download and install docker desktop by following the instructions in the link below
-[Docker desktop installation and setup for windows](https://docs.docker.com/desktop/install/windows-install/)
-[Docker desktop installation and setup for mac](https://docs.docker.com/desktop/install/mac-install/)
-[Docker desktop installation and setup for linux](https://docs.docker.com/desktop/install/linux-install/)
+first, download and install docker desktop by following the instructions in the links below
+- [Docker desktop installation and setup for windows](https://docs.docker.com/desktop/install/windows-install/)
+- [Docker desktop installation and setup for mac](https://docs.docker.com/desktop/install/mac-install/)
+- [Docker desktop installation and setup for linux](https://docs.docker.com/desktop/install/linux-install/)
 
 second, clone this repository to a local directory.
 ```bash
