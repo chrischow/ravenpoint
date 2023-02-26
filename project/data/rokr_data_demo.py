@@ -12,19 +12,26 @@ from tqdm import tqdm
 from werkzeug.utils import secure_filename
 
 # Configure connection string
-conn_string = '/home/chrischow/repos/ravenpoint/project/data/data.sqlite'
+# conn_string = '/home/chrischow/repos/ravenpoint/project/data/data.sqlite'
+conn_string = './data.sqlite'
 
 # Set up faker
 fake = Faker()
 
 # Lookups
 teams = [
-  dict(teamName='HQ', slug='hq'),
-  dict(teamName='Marketing', slug='marketing'),
-  dict(teamName='HR', slug='hr'),
-  dict(teamName='Finance', slug='finance'),
-  dict(teamName='R&D', slug='research-devt'),
-  dict(teamName='IT', slug='it')
+  # dict(teamName='HQ', slug='hq'),
+  # dict(teamName='Marketing', slug='marketing'),
+  # dict(teamName='HR', slug='hr'),
+  # dict(teamName='Finance', slug='finance'),
+  # dict(teamName='R&D', slug='research-devt'),
+  # dict(teamName='IT', slug='it')
+  dict(teamName='PIXEL HQ', slug='pixel'),
+  dict(teamName='Tech and Science', slug='tech'),
+  dict(teamName='Experiments', slug='expr'),
+  dict(teamName='HPM', slug='hpm'),
+  dict(teamName='Data', slug='data'),
+  dict(teamName='Contracting and Finance', slug='finance')
 ]
 
 max_scores = [int(x) for x in range(10, 110, 10)]
@@ -135,40 +142,40 @@ df_updates = pd.DataFrame(updates) \
   .rename(columns={'index': 'Id'})
 
 # Write to SQLite
-# print('Saving to database...')
-# table_names = ['ROKR Objectives', 'ROKR Key Results', 'ROKR Updates']
-# tables = [df_objectives, df_key_results, df_updates]
+print('Saving to database...')
+table_names = ['ROKR Objectives', 'ROKR Key Results', 'ROKR Updates']
+tables = [df_objectives, df_key_results, df_updates]
 
-# with sqlite3.connect(conn_string) as conn:
-#   try:
-#     for tablename, table in zip(table_names, tables):
-#       # Create table
-#       print(tablename)
-#       table_db_name = secure_filename(tablename).lower()
-#       temp_df = pd.DataFrame(table)
-#       temp_df.to_sql(
-#         table_db_name, con=conn, if_exists='replace', index=False,
-#         dtype={f'Id': 'INTEGER PRIMARY KEY'}
-#       )
+with sqlite3.connect(conn_string) as conn:
+  try:
+    for tablename, table in zip(table_names, tables):
+      # Create table
+      print(tablename)
+      table_db_name = secure_filename(tablename).lower()
+      temp_df = pd.DataFrame(table)
+      temp_df.to_sql(
+        table_db_name, con=conn, if_exists='replace', index=False,
+        dtype={f'Id': 'INTEGER PRIMARY KEY'}
+      )
 
-#       # Add to register
-#       cursor = conn.cursor()
-#       table_hash_id = md5(tablename.encode()).hexdigest()
-#       cursor.execute(f"INSERT OR REPLACE INTO tables (id, table_name, table_db_name) \
-#         VALUES ('{table_hash_id}', '{tablename}', '{table_db_name}')")
-#   except Exception as e:
-#     print(e)
-#     conn.rollback()
+      # Add to register
+      cursor = conn.cursor()
+      table_hash_id = md5(tablename.encode()).hexdigest()
+      cursor.execute(f"INSERT OR REPLACE INTO tables (id, table_name, table_db_name) \
+        VALUES ('{table_hash_id}', '{tablename}', '{table_db_name}')")
+  except Exception as e:
+    print(e)
+    conn.rollback()
 
 # Write to JSON
-print('Writing to JSON...')
-import json
+# print('Writing to JSON...')
+# import json
 
-with open('./exports/objectives.json', 'w') as f:
-  json.dump({'data': df_objectives.to_dict('records')}, f)
+# with open('./exports/objectives.json', 'w') as f:
+#   json.dump({'data': df_objectives.to_dict('records')}, f)
 
-with open('./exports/keyResults.json', 'w') as f:
-  json.dump({'data': df_key_results.to_dict('records')}, f)
+# with open('./exports/keyResults.json', 'w') as f:
+#   json.dump({'data': df_key_results.to_dict('records')}, f)
 
-with open('./exports/updates.json', 'w') as f:
-  json.dump({'data': df_updates.to_dict('records')}, f)
+# with open('./exports/updates.json', 'w') as f:
+#   json.dump({'data': df_updates.to_dict('records')}, f)

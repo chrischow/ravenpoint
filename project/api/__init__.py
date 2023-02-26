@@ -52,7 +52,6 @@ class HelloWorld(Resource):
   doc={'description': '''Endpoint for getting X-Request digest value, which is \
     used in POST requests for creating, updating, and deleting entries.'''}
 )
-
 class XRequestDigestValue(Resource):
   @api_namespace.response(500, 'Internal Server Error')
   def post(self):
@@ -115,7 +114,7 @@ class ListMetadata(Resource):
     return {'d': output}
 
 
-# Endpoint for list metadata
+# Endpoint for list metadata by GetByTitle
 @api_namespace.route(
   "/web/lists/GetByTitle('<string:list_name>')",
   doc={'description': '''Endpoint for getting List metadata. Use `$select` to choose \
@@ -123,7 +122,7 @@ class ListMetadata(Resource):
     `table_name` (RavenPoint only) and `table_db_name` (RavenPoint only).'''}
 )
 @api_namespace.doc(params={'list_name': 'Simulated SP List Name'})
-class ListMetadata(Resource):
+class ListByTitleMetadata(Resource):
   @api_namespace.response(200, 'Success: Returns List metadata')
   @api_namespace.response(400, 'Bad request: Invalid query.')
   @api_namespace.response(500, 'Internal Server Error')
@@ -545,7 +544,7 @@ The URL parameter hierarchy is `select` > `expand` > `filter`. Any other combina
 keys as the schema and fill in your own values. Check the models below for more details.
   '''})
 @api_namespace.doc(params={'list_name': 'Simulated SP List ID'})
-class ListItems(Resource):
+class ListByTitleItems(Resource):
   @api_namespace.response(200, 'Success: Returns requested list items or properties.')
   @api_namespace.response(400, 'Bad request: Invalid query.')
   @api_namespace.response(500, 'Internal Server Error')
@@ -695,7 +694,7 @@ class ListItems(Resource):
   # Update item
   @api_namespace.expect(create_update_model, validate=False)
   @api_namespace.doc(security='X-RequestDigest')
-  def post(self, list_id):
+  def post(self, list_name):
     '''RavenPoint List items endpoint (Create)'''
 
     # Extract request headers, and body
@@ -703,7 +702,7 @@ class ListItems(Resource):
     data = request.json
 
     # Run checks
-    check_reqs = validate_create_update_query(headers, data, list_id)
+    check_reqs = validate_create_update_query_listname(headers, data, list_name)
     if check_reqs.get('BadRequest'):
       raise BadRequest(check_reqs.get('BadRequest'))
     
@@ -761,10 +760,10 @@ class UpdateListItems(Resource):
     '''RavenPoint list items endpoint (Update/Delete)'''
     # Extract request headers, and body
     headers = request.headers
-    data = request.json
-
+    
     # Update query
     if headers.get('X-Http-Method') == 'MERGE':
+      data = request.json
       # Run checks on List, ListItemEntityTypeFullName, and item
       check_reqs = validate_create_update_query_listname(headers, data, list_name, True, item_id)
       if check_reqs.get('BadRequest'):
