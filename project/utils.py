@@ -2,7 +2,7 @@
 import pandas as pd
 import re
 import sqlite3
-
+import os
 from project import app
 from wtforms import ValidationError
 
@@ -343,6 +343,9 @@ def validate_create_update_query_listname(headers, data, list_name, update=False
     'data': df
   }
 
+
+
+
 def validate_delete_query_listname(headers, list_name, item_id=None):
 
   # 1. Check headers
@@ -382,4 +385,20 @@ def validate_delete_query_listname(headers, list_name, item_id=None):
     'data': df
   }
 
-  
+
+
+def validate_file_query(header,filename):
+  xRequestDigest = header.get('X-RequestDigest')
+  folder = "/project/data/documents"
+  curdir = os.path.abspath(os.getcwd())
+  fulldir = curdir.replace('''\\''', "/") + folder
+  files = os.listdir(fulldir)
+  if xRequestDigest is None:
+    return { 'BadRequest': f"No token provided. Unable to 'authenticate' request." }
+  if filename not in files:
+    return { 'BadRequest': f'''incorrect file name or file does not exist
+      please check if you have specified the correct filename in your request
+       or have uploaded your file into ravenpoint ''' }
+  return {
+        'Success': True,
+    }

@@ -5,12 +5,12 @@ import pandas as pd
 import sqlite3
 import time
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_from_directory,Response 
 from flask_restx import Namespace, Resource, fields
 from project import db, app
 from project.utils import get_all_table_names, get_all_relationships, parse_odata_filter, \
   parse_odata_query, validate_create_update_query, validate_delete_query, \
-  validate_create_update_query_listname, validate_delete_query_listname
+  validate_create_update_query_listname, validate_delete_query_listname, validate_file_query
 from werkzeug.exceptions import BadRequest
 
 # Create blueprint
@@ -828,3 +828,29 @@ class UpdateListItems(Resource):
         # 'query': query,
         'message': f'Successfully delete item {item_id}',
       }
+    
+
+@api_namespace.route("/web/GetFolderByServerRelativeUrl(ravenpoint)/Files('<string:file_name>')/$value"
+                     ,doc={"description":'''Endpoint for retrieving files form ravenpoint'''})
+@api_namespace.doc(params={
+  "file_name":"Name of simulated file in ravenpoint"
+})
+
+class GetFile(Resource):
+
+
+  @api_namespace.doc(security='X-RequestDigest')
+  def get(self,file_name):
+    folder = "/project/data/documents"
+    curdir = os.path.abspath(os.getcwd())
+    fulldir = curdir.replace('''\\''',"/") + folder
+    headers = request.headers
+    check_reqs = validate_file_query(headers,file_name)
+    if check_reqs.get('BadRequest'):
+      raise BadRequest(check_reqs.get('BadRequest'))
+    else:
+       return send_from_directory(fulldir,file_name)
+  
+
+
+   

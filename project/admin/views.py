@@ -5,7 +5,7 @@ import sqlite3
 
 from flask import render_template, Blueprint, url_for, redirect, request, flash, send_from_directory
 from project import db, app
-from project.admin.forms import UploadData, EditRelationship
+from project.admin.forms import UploadData, EditRelationship,UploadFile
 from project.models import Table, Relationship
 from project.utils import get_all_table_names, get_all_table_metadata, translate_odata, \
     get_all_relationships
@@ -184,6 +184,54 @@ def relationships():
     return render_template('relationships.html', form=form,
                            relationships=all_relationships.to_dict('records'))
 
+
+@admin.route('/files', methods=['GET', 'POST'])
+def files():
+    form = UploadFile()
+    folder = "/project/data/documents"
+    curdir = os.path.abspath(os.getcwd())
+    fulldir = curdir.replace('''\\''',"/") + folder
+    files = os.listdir(fulldir)
+
+    if request.method == 'POST':
+        if form.validate_on_submit():
+
+            # Upload file to server
+            file = request.files['file']
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(fulldir, filename)
+            print(filepath)
+            file.save(filepath)
+            flash(
+                f'Successfully loaded file as {file.filename}.', 'success')
+            return redirect(url_for('admin.files'))
+
+
+    return render_template('files.html',form=form,files=files)
+
+
+@admin.route('/files/<string:file_name>/delete', methods=['POST'])
+def file_delete(file_name):
+    folder = "/project/data/documents"
+    curdir = os.path.abspath(os.getcwd())
+    fulldir = curdir.replace('''\\''',"/") + folder
+    files = os.listdir(fulldir)
+
+    if request.method == 'POST':
+        print(file_name)
+        if file_name in files:
+
+            # Upload file to server
+   
+            filepath = os.path.join(fulldir, file_name)
+            print(filepath)
+            os.remove(filepath)
+            flash(
+                f'Successfully deleted file  {file_name}.', 'success')
+            return redirect(url_for('admin.files'))
+
+
+
 @admin.route('/relationship/<int:id>', methods=['GET', 'POST'])
 def relationship(id):
 
@@ -219,6 +267,10 @@ def relationship(id):
         return redirect(url_for('admin.relationships'))
 
     return render_template('relationship.html', form=form, id=id, rship=json.dumps(output))
+
+
+
+
 
 @admin.route('/relationship/<int:id>/delete', methods=['POST'])
 def relationship_delete(id):
