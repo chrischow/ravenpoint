@@ -11,6 +11,11 @@ class UploadData(FlaskForm):
     
     submit = SubmitField('Submit')
 
+
+class UploadFile(FlaskForm):
+    file = FileField('File')
+    submit = SubmitField('Submit')
+
 class EditRelationship(FlaskForm):
     table_left = SelectField('Table Name', validators=[InputRequired()], validate_choice=False)
     table_left_on = SelectField('Table Column', validators=[InputRequired()], validate_choice=False)
