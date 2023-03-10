@@ -425,6 +425,7 @@ VALUES ({', '.join(values_clause)})'''
       cursor = conn.cursor()
       try:
         cursor.execute(query)
+        Id = cursor.lastrowid
         conn.commit()
       except Exception as e:
         print(e)
@@ -435,6 +436,7 @@ VALUES ({', '.join(values_clause)})'''
       # 'token': headers.get('X-RequestDigest'),
       # 'table': check_reqs.get('table'),
       'query': query,
+      "d": {'Id': Id},
       'message': f'Successfully added item.',
     }
 
@@ -731,7 +733,9 @@ VALUES ({', '.join(values_clause)})'''
       cursor = conn.cursor()
       try:
         cursor.execute(query)
+        Id = cursor.lastrowid
         conn.commit()
+        print(Id)
       except Exception as e:
         print(e)
         conn.rollback()
@@ -741,6 +745,7 @@ VALUES ({', '.join(values_clause)})'''
       # 'token': headers.get('X-RequestDigest'),
       # 'table': check_reqs.get('table'),
       'query': query,
+      "d":{'Id':Id},
       'message': f'Successfully added item.',
     }
 
@@ -830,8 +835,7 @@ class UpdateListItems(Resource):
       }
     
 
-@api_namespace.route("/web/GetFolderByServerRelativeUrl(ravenpoint)/Files('<string:file_name>')/$value"
-                     ,doc={"description":'''Endpoint for retrieving files form ravenpoint'''})
+@api_namespace.route("/web/GetFolderByServerRelativeUrl('Shared Documents')/Files('<string:file_name>')/$value"                     ,doc={"description":'''Endpoint for retrieving files form ravenpoint'''})
 @api_namespace.doc(params={
   "file_name":"Name of simulated file in ravenpoint"
 })
