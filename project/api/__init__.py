@@ -741,11 +741,11 @@ VALUES ({', '.join(values_clause)})'''
         conn.rollback()
         raise BadRequest(f'Invalid request - data does not match table schema: {e}')
     return {
-      # 'data': data,
+    #  'data': data,
       # 'token': headers.get('X-RequestDigest'),
       # 'table': check_reqs.get('table'),
       'query': query,
-      "d":{'Id':Id},
+      "d":{'Id':Id,**data},
       'message': f'Successfully added item.',
     }
 
@@ -798,7 +798,9 @@ class UpdateListItems(Resource):
         cursor = conn.cursor()
         try:
           cursor.execute(query)
+          Id = cursor.lastrowid
           conn.commit()
+
         except Exception as e:
           conn.rollback()
           raise BadRequest(f'Invalid request - data does not match table schema: {e}')
@@ -807,6 +809,7 @@ class UpdateListItems(Resource):
         # 'token': headers.get('X-RequestDigest'),
         # 'table': check_reqs.get('table'),
         # 'query': query,
+        "d":{'Id':Id,**data},
         'message': f'Successfully updated item {item_id}',
       }
     else:
@@ -835,7 +838,7 @@ class UpdateListItems(Resource):
       }
     
 
-@api_namespace.route("/web/GetFolderByServerRelativeUrl('Shared Documents')/Files('<string:file_name>')/$value"                     ,doc={"description":'''Endpoint for retrieving files form ravenpoint'''})
+@api_namespace.route("/web/GetFolderByServerRelativeUrl('Shared Documents')/Files('<string:file_name>')/$value",doc={"description":'''Endpoint for retrieving files form ravenpoint'''})
 @api_namespace.doc(params={
   "file_name":"Name of simulated file in ravenpoint"
 })

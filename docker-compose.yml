@@ -8,11 +8,12 @@ services:
       ports:
         - "5000:5000"
       volumes:
-        # - .:/usr/src
+        - files:/usr/src/project/data/documents
         - data_files:/usr/src/project/static/files
       command: /bin/bash -c "source activate ravenpoint && python3 app.py"
 
 volumes:
 #   code:
+  files:
   data_files:
   
