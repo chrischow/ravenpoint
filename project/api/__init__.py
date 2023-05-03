@@ -620,10 +620,12 @@ class ListByTitleItems(Resource):
     # Add aliases to lookup tables
     select_aliases = [f"{curr_db_table}.{col}" for col in params['main_cols']] + \
       params['join_cols']
-    
+    if not select_aliases :
+      select_aliases = ["*"]
+    print("",select_aliases)
     # Prepare SQL query
     sql_query = []
-    sql_query.append(f"SELECT {', '.join(select_aliases)}")
+    sql_query.append(f"SELECT{', '.join(select_aliases)}")
     sql_query.append(f"FROM {curr_db_table}")
 
     # If single lookup, do a left join; otherwise, left join the junction table first
@@ -647,7 +649,9 @@ class ListByTitleItems(Resource):
       sql_query.append(f"WHERE {params['filter_query']}")
 
     # Query database and process data
+    print("conn tr",conn_string)
     with sqlite3.connect(conn_string) as conn:
+      print(' '.join(sql_query))
       data = pd.read_sql(' '.join(sql_query), con=conn)
     nested_cols = data.columns[data.columns.str.contains('__', regex=False)]
     nested_cols = list(set([col.split('__')[0] for col in nested_cols]))
