@@ -322,7 +322,8 @@ def validate_create_update_query_listname(headers, data, list_name, update=False
   table = all_tables \
       .rename(columns={'id': 'Id'}) \
       .loc[all_tables.table_name.eq(list_name)].to_dict('records')[0]
-  table_pascal = table['table_db_name'].title().replace('_', '')
+  # table_pascal = table['table_db_name'].title().replace('_', '')
+  table_pascal = table['table_name']
   lietfn = f'SP.Data.{table_pascal}ListItem'
   # Retrieve metadata from request
   request_lietfn = metadata.get('type')

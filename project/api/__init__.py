@@ -425,6 +425,7 @@ VALUES ({', '.join(values_clause)})'''
       cursor = conn.cursor()
       try:
         cursor.execute(query)
+        Id = cursor.lastrowid
         conn.commit()
       except Exception as e:
         print(e)
@@ -435,6 +436,7 @@ VALUES ({', '.join(values_clause)})'''
       # 'token': headers.get('X-RequestDigest'),
       # 'table': check_reqs.get('table'),
       'query': query,
+      "d": {'Id': Id},
       'message': f'Successfully added item.',
     }
 
@@ -618,10 +620,12 @@ class ListByTitleItems(Resource):
     # Add aliases to lookup tables
     select_aliases = [f"{curr_db_table}.{col}" for col in params['main_cols']] + \
       params['join_cols']
-    
+    if not select_aliases :
+      select_aliases = ["*"]
+    print("",select_aliases)
     # Prepare SQL query
     sql_query = []
-    sql_query.append(f"SELECT {', '.join(select_aliases)}")
+    sql_query.append(f"SELECT{', '.join(select_aliases)}")
     sql_query.append(f"FROM {curr_db_table}")
 
     # If single lookup, do a left join; otherwise, left join the junction table first
@@ -645,7 +649,9 @@ class ListByTitleItems(Resource):
       sql_query.append(f"WHERE {params['filter_query']}")
 
     # Query database and process data
+    print("conn tr",conn_string)
     with sqlite3.connect(conn_string) as conn:
+      print(' '.join(sql_query))
       data = pd.read_sql(' '.join(sql_query), con=conn)
     nested_cols = data.columns[data.columns.str.contains('__', regex=False)]
     nested_cols = list(set([col.split('__')[0] for col in nested_cols]))
@@ -731,16 +737,19 @@ VALUES ({', '.join(values_clause)})'''
       cursor = conn.cursor()
       try:
         cursor.execute(query)
+        Id = cursor.lastrowid
         conn.commit()
+        print(Id)
       except Exception as e:
         print(e)
         conn.rollback()
         raise BadRequest(f'Invalid request - data does not match table schema: {e}')
     return {
-      # 'data': data,
+    #  'data': data,
       # 'token': headers.get('X-RequestDigest'),
       # 'table': check_reqs.get('table'),
       'query': query,
+      "d":{'Id':Id,**data},
       'message': f'Successfully added item.',
     }
 
@@ -793,7 +802,9 @@ class UpdateListItems(Resource):
         cursor = conn.cursor()
         try:
           cursor.execute(query)
+          Id = cursor.lastrowid
           conn.commit()
+
         except Exception as e:
           conn.rollback()
           raise BadRequest(f'Invalid request - data does not match table schema: {e}')
@@ -802,6 +813,7 @@ class UpdateListItems(Resource):
         # 'token': headers.get('X-RequestDigest'),
         # 'table': check_reqs.get('table'),
         # 'query': query,
+        "d":{'Id':Id,**data},
         'message': f'Successfully updated item {item_id}',
       }
     else:
@@ -830,8 +842,7 @@ class UpdateListItems(Resource):
       }
     
 
-@api_namespace.route("/web/GetFolderByServerRelativeUrl(ravenpoint)/Files('<string:file_name>')/$value"
-                     ,doc={"description":'''Endpoint for retrieving files form ravenpoint'''})
+@api_namespace.route("/web/GetFolderByServerRelativeUrl('Shared Documents')/Files('<string:file_name>')/$value",doc={"description":'''Endpoint for retrieving files form ravenpoint'''})
 @api_namespace.doc(params={
   "file_name":"Name of simulated file in ravenpoint"
 })

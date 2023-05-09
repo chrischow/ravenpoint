@@ -12,6 +12,11 @@ class UploadData(FlaskForm):
     submit = SubmitField('Submit')
 
 
+class CreateFolder(FlaskForm):
+
+    table_name = StringField('Folder Name', [DataRequired()])
+    submit = SubmitField('Submit')
+
 class UploadFile(FlaskForm):
     file = FileField('File')
     submit = SubmitField('Submit')
