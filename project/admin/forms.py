@@ -21,6 +21,12 @@ class UploadFile(FlaskForm):
     file = FileField('File')
     submit = SubmitField('Submit')
 
+
+class CreateUser(FlaskForm):
+    username = StringField('User Name', [DataRequired()])
+    submit = SubmitField('Submit')
+
+
 class EditRelationship(FlaskForm):
     table_left = SelectField('Table Name', validators=[InputRequired()], validate_choice=False)
     table_left_on = SelectField('Table Column', validators=[InputRequired()], validate_choice=False)

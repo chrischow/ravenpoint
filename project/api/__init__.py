@@ -863,5 +863,38 @@ class GetFile(Resource):
        return send_from_directory(fulldir,file_name)
   
 
+@api_namespace.route("/web/getuserbyid('<int:Id>')",doc={"description":'''Endpoint for retrieving simulated user by id from ravenpoint'''})
+@api_namespace.doc(params={
+  "Id":"Id of simulated user in ravenpoint"
+})
+class getuserbyid(Resource):
+  @api_namespace.doc(security='X-RequestDigest')
+  def get(self,Id):
+      with sqlite3.connect(conn_string) as conn:
+        try:
+          df = pd.read_sql_query("SELECT * FROM rpusers WHERE Id = {}".format(Id),conn)
+          data = df.to_dict('records')
+          if data == []:
+            raise BadRequest(f'User does not exist')
+          else:
+            return data
+        except Exception as e:
+          conn.rollback()
+          raise BadRequest(f'Error retrieving user {e}')
 
-   
+
+@api_namespace.route("/web/currentUser",doc={"description":'''Endpoint for retrieving current simulated user from ravenpoint will return first user in rpusers table'''})
+class currentUser(Resource):
+  @api_namespace.doc(security='X-RequestDigest')
+  def get(self):
+      with sqlite3.connect(conn_string) as conn:
+        try:
+          df = pd.read_sql_query("SELECT * FROM rpusers WHERE Id = {}".format(1),conn)
+          data = df.to_dict('records')
+          if data == []:
+            raise BadRequest(f'No users exist in rpusers table please create a user')
+          else:
+            return data[0]
+        except Exception as e:
+          conn.rollback()
+          raise BadRequest(f'Error retrieving user {e}')

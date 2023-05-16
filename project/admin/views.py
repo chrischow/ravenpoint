@@ -5,7 +5,7 @@ import sqlite3
 
 from flask import render_template, Blueprint, url_for, redirect, request, flash, send_from_directory
 from project import db, app
-from project.admin.forms import UploadData, EditRelationship,UploadFile
+from project.admin.forms import UploadData, EditRelationship,UploadFile,CreateUser
 from project.models import Table, Relationship
 from project.utils import get_all_table_names, get_all_table_metadata, translate_odata, \
     get_all_relationships
@@ -210,6 +210,12 @@ def files():
     return render_template('files.html',form=form,files=files)
 
 
+
+
+                       
+            
+
+
 @admin.route('/files/<string:file_name>/delete', methods=['POST'])
 def file_delete(file_name):
     folder = "/project/data/documents"
@@ -230,6 +236,57 @@ def file_delete(file_name):
                 f'Successfully deleted file  {file_name}.', 'success')
             return redirect(url_for('admin.files'))
 
+
+@admin.route('/users', methods=['GET', 'POST'])
+def users():
+    form = CreateUser()
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            # Extract form data
+            username = form.username.data
+            email = username+"@defencemail.gov.sg"
+            df = pd.DataFrame({'Title': [username], 'Email': [email]})
+            print(df)
+            with sqlite3.connect(conn_string) as conn:
+                cursor = conn.cursor()
+                try:
+                   res = cursor.execute(''' SELECT count(name) FROM sqlite_master WHERE type='table' AND name='rpusers' ''')
+                   tableExists = res.fetchone()[0]
+                   if tableExists==1 :
+                       df.to_sql('rpusers', con=conn, if_exists='append', index=False)
+                       db.session.commit()
+                   else:
+                       cursor.execute('''CREATE TABLE rpusers (Id INTEGER PRIMARY KEY , Title text, Email text)''')
+                       df.to_sql('rpusers', con=conn, if_exists='append', index=False)
+                       db.session.commit()
+                except Exception as e:
+                    print("user create error:",e)
+                    db.session.rollback()
+                    
+                finally:
+                    return redirect(url_for('admin.users'))
+    else:
+        try:
+            with sqlite3.connect(conn_string) as conn:
+                df = pd.read_sql('''SELECT * FROM rpusers''', con=conn)
+                users = df.to_dict('records')
+        except Exception as e:
+            users = []
+        return render_template('users.html',form=form,users=users)
+                       
+@admin.route('/users/<int:id>/delete', methods=['POST'])
+def user_delete(id):
+    if request.method == 'POST':
+        with sqlite3.connect(conn_string) as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute('''DELETE FROM rpusers WHERE Id=?''',(id,))
+                db.session.commit()
+            except Exception as e:
+                print("user delete error:",e)
+                db.session.rollback()
+            finally:
+                return redirect(url_for('admin.users'))
 
 
 @admin.route('/relationship/<int:id>', methods=['GET', 'POST'])
