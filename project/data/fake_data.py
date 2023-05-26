@@ -8,7 +8,7 @@ from hashlib import md5
 from werkzeug.utils import secure_filename
 
 # Configure connection string
-conn_string = '/home/chrischow/repos/ravenpoint/project/data/data.sqlite'
+conn_string = 'D:/rdo/ravenpoint/project/data/data.sqlite'
 
 # Choices
 data_domains = ['Ops', 'Manpower', 'Training', 'Intel', 'Engineering', 'Safety']
