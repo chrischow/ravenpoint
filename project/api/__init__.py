@@ -287,15 +287,16 @@ class ListItems(Resource):
       
       # Check if relationship exists
       rship = all_rships.loc[all_rships.table_left.eq(curr_db_table) & \
-        all_rships.table_left_on.eq(col)].to_dict('records')[0]
+        all_rships.table_left_on.eq(col)].to_dict('records')
       if len(rship) == 0:
         raise BadRequest(f"Relationship from field '{col}' does not exist.")
       else:
         joins[col] = {
-          'table': rship['table_lookup'],
-          'table_pk': rship['table_lookup_on'],
-          'is_multi': rship['is_multi']
+          'table': rship[0]['table_lookup'],
+          'table_pk': rship[0]['table_lookup_on'],
+          'is_multi': rship[0]['is_multi']
         }
+        print(joins)
 
     # Process joins data
     for i, col in enumerate(params['join_cols']):
@@ -588,21 +589,26 @@ class ListByTitleItems(Resource):
     
     # EXPAND - Get all tables in query
     joins = {}
+    print('tables to join',joins)
     for col in params['expand_cols']:
       # Check if the column to expand was included in the selected columns
       if not any([col in join_col for join_col in params['join_cols']]):
         raise BadRequest(f"The query to field '{col}' is not valid. The $select query string must specify the target fields and the $expand query string must contain {col}.")
       
       # Check if relationship exists
+      print(col)
+      print('all_rships',all_rships)
+      print(all_rships.loc[all_rships.table_left.eq(curr_db_table) & \
+        all_rships.table_left_on.eq(col)].to_dict('records'))
       rship = all_rships.loc[all_rships.table_left.eq(curr_db_table) & \
-        all_rships.table_left_on.eq(col)].to_dict('records')[0]
-      if len(rship) == 0:
+        all_rships.table_left_on.eq(col)].to_dict('records')
+      if len(rship) == 0 or rship == []:
         raise BadRequest(f"Relationship from field '{col}' does not exist.")
       else:
         joins[col] = {
-          'table': rship['table_lookup'],
-          'table_pk': rship['table_lookup_on'],
-          'is_multi': rship['is_multi']
+          'table': rship[0]['table_lookup'],
+          'table_pk': rship[0]['table_lookup_on'],
+          'is_multi': rship[0]['is_multi']
         }
 
     # Process joins data
@@ -625,7 +631,7 @@ class ListByTitleItems(Resource):
     print("",select_aliases)
     # Prepare SQL query
     sql_query = []
-    sql_query.append(f"SELECT{', '.join(select_aliases)}")
+    sql_query.append(f"SELECT {', '.join(select_aliases)}")
     sql_query.append(f"FROM {curr_db_table}")
 
     # If single lookup, do a left join; otherwise, left join the junction table first
@@ -863,5 +869,38 @@ class GetFile(Resource):
        return send_from_directory(fulldir,file_name)
   
 
+@api_namespace.route("/web/getuserbyid('<int:Id>')",doc={"description":'''Endpoint for retrieving simulated user by id from ravenpoint'''})
+@api_namespace.doc(params={
+  "Id":"Id of simulated user in ravenpoint"
+})
+class getuserbyid(Resource):
+  @api_namespace.doc(security='X-RequestDigest')
+  def get(self,Id):
+      with sqlite3.connect(conn_string) as conn:
+        try:
+          df = pd.read_sql_query("SELECT * FROM rpusers WHERE Id = {}".format(Id),conn)
+          data = df.to_dict('records')
+          if data == []:
+            raise BadRequest(f'User does not exist')
+          else:
+            return data[0]
+        except Exception as e:
+          conn.rollback()
+          raise BadRequest(f'Error retrieving user {e}')
 
-   
+
+@api_namespace.route("/web/currentUser",doc={"description":'''Endpoint for retrieving current simulated user from ravenpoint will return first user in rpusers table'''})
+class currentUser(Resource):
+  @api_namespace.doc(security='X-RequestDigest')
+  def get(self):
+      with sqlite3.connect(conn_string) as conn:
+        try:
+          df = pd.read_sql_query("SELECT * FROM rpusers WHERE Id = {}".format(1),conn)
+          data = df.to_dict('records')
+          if data == []:
+            raise BadRequest(f'No users exist in rpusers table please create a user')
+          else:
+            return data[0]
+        except Exception as e:
+          conn.rollback()
+          raise BadRequest(f'Error retrieving user {e}')
